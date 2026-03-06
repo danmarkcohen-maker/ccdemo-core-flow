@@ -116,7 +116,7 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
           {/* Left eye - centered in left bump */}
           <div
             className="absolute z-[11]"
-            style={{ top: "-48px", left: "18px" }}
+            style={{ top: "-40px", left: "28px" }}
           >
             <div
               className="rounded-full"
@@ -147,7 +147,7 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
           {/* Right eye */}
           <div
             className="absolute z-[11]"
-            style={{ top: "-48px", right: "18px" }}
+            style={{ top: "-40px", right: "28px" }}
           >
             <div
               className="rounded-full"
