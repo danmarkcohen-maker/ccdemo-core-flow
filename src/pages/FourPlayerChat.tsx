@@ -37,20 +37,14 @@ const FourPlayerChat: React.FC = () => {
   const [scriptIndex, setScriptIndex] = useState(0);
   const [entered, setEntered] = useState(false);
 
-  useEffect(() => {
-    setTimeout(() => setEntered(true), 1500);
-  }, []);
+  useEffect(() => { setTimeout(() => setEntered(true), 1500); }, []);
 
   useEffect(() => {
     if (!entered || scriptIndex >= scriptedMessages.length) return;
     const msg = scriptedMessages[scriptIndex];
     const delay = scriptIndex === 0 ? 800 : 2200;
-
     if (!msg.isUser) {
-      const t1 = setTimeout(() => {
-        setShowThinking(true);
-        setSpeakingCreature(msg.creatureType);
-      }, delay);
+      const t1 = setTimeout(() => { setShowThinking(true); setSpeakingCreature(msg.creatureType); }, delay);
       const t2 = setTimeout(() => {
         setShowThinking(false);
         setVisibleMessages((prev) => [...prev, msg]);
@@ -59,43 +53,44 @@ const FourPlayerChat: React.FC = () => {
       }, delay + 2200);
       return () => { clearTimeout(t1); clearTimeout(t2); };
     } else {
-      const t = setTimeout(() => {
-        setVisibleMessages((prev) => [...prev, msg]);
-        setScriptIndex((i) => i + 1);
-      }, delay);
+      const t = setTimeout(() => { setVisibleMessages((prev) => [...prev, msg]); setScriptIndex((i) => i + 1); }, delay);
       return () => clearTimeout(t);
     }
   }, [entered, scriptIndex]);
 
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [visibleMessages, showThinking]);
+  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [visibleMessages, showThinking]);
 
   return (
     <DeviceFrame>
       <BackButton />
-      <FrogCreature opacity={0.08} speaking={speakingCreature === "frog"} className="top-[5%] left-[5%]" />
-      <OwlCreature opacity={entered ? 0.08 : 0} speaking={speakingCreature === "owl"} className="top-[5%] right-[5%] transition-opacity duration-[2000ms]" />
-      <RobotCreature opacity={entered ? 0.08 : 0} speaking={speakingCreature === "robot"} className="bottom-[15%] left-[5%] transition-opacity duration-[2000ms] delay-500" />
-      <FoxCreature opacity={entered ? 0.08 : 0} speaking={speakingCreature === "fox"} className="bottom-[15%] right-[5%] transition-opacity duration-[2000ms] delay-1000" />
+      <FrogCreature opacity={0.14} size={280} speaking={speakingCreature === "frog"} className="top-[3%] left-[2%]" />
+      <OwlCreature opacity={entered ? 0.14 : 0} speaking={speakingCreature === "owl"} className="top-[3%] right-[2%] transition-opacity duration-[2000ms]" />
+      <RobotCreature opacity={entered ? 0.14 : 0} speaking={speakingCreature === "robot"} className="bottom-[12%] left-[2%] transition-opacity duration-[2000ms] delay-500" />
+      <FoxCreature opacity={entered ? 0.14 : 0} speaking={speakingCreature === "fox"} className="bottom-[12%] right-[2%] transition-opacity duration-[2000ms] delay-1000" />
 
       <div className="relative z-10 flex flex-col h-full">
-        <div className="flex items-center justify-center py-4 border-b border-border/30">
-          <div className="text-xs text-muted-foreground tracking-widest uppercase">
-            Playdate · Beth, Chloe, Sam & Leo
+        <div className="flex items-center justify-center py-4">
+          <div className="flex items-center gap-2.5">
+            {[
+              { name: "Beth", color: "bg-creature-frog-glow" },
+              { name: "Chloe", color: "bg-creature-owl-glow" },
+              { name: "Sam", color: "bg-creature-robot-glow" },
+              { name: "Leo", color: "bg-creature-fox-glow" },
+            ].map((p, i) => (
+              <React.Fragment key={p.name}>
+                {i > 0 && <span className="text-muted-foreground/20">·</span>}
+                <div className="flex items-center gap-1">
+                  <div className={`w-1.5 h-1.5 rounded-full ${p.color}`} />
+                  <span className="text-xs text-foreground/50">{p.name}</span>
+                </div>
+              </React.Fragment>
+            ))}
           </div>
         </div>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4" style={{ scrollBehavior: "smooth" }}>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3" style={{ scrollBehavior: "smooth" }}>
           {visibleMessages.map((msg, i) => (
-            <ChatBubble
-              key={i}
-              sender={msg.sender}
-              message={msg.message}
-              isUser={msg.isUser}
-              creatureType={msg.creatureType}
-              streaming={msg.streaming}
-            />
+            <ChatBubble key={i} sender={msg.sender} message={msg.message} isUser={msg.isUser} creatureType={msg.creatureType} streaming={msg.streaming} />
           ))}
           {showThinking && <ThinkingDots />}
         </div>

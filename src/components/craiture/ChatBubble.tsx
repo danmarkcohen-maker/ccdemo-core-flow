@@ -19,6 +19,13 @@ const bubbleColors: Record<string, string> = {
   fox: "bg-bubble-fox",
 };
 
+const accentDots: Record<string, string> = {
+  frog: "bg-creature-frog-glow",
+  owl: "bg-creature-owl-glow",
+  robot: "bg-creature-robot-glow",
+  fox: "bg-creature-fox-glow",
+};
+
 const ChatBubble: React.FC<ChatBubbleProps> = ({
   sender,
   message,
@@ -48,7 +55,7 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
         clearInterval(interval);
         setStreamDone(true);
       }
-    }, 25);
+    }, 22);
     return () => clearInterval(interval);
   }, [visible, streaming, message]);
 
@@ -58,22 +65,29 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
 
   return (
     <div
-      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}
-      style={{ animation: "message-appear 0.25s ease-out" }}
+      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3.5`}
+      style={{ animation: "message-appear 0.3s ease-out" }}
     >
-      <div className={`max-w-[75%] ${isUser ? "items-end" : "items-start"}`}>
-        <div className="text-[10px] text-muted-foreground mb-1 px-3 font-medium tracking-wide uppercase">
-          {sender}
+      <div className={`max-w-[78%] ${isUser ? "items-end" : "items-start"}`}>
+        <div className={`flex items-center gap-1.5 mb-1 px-3 ${isUser ? "justify-end" : "justify-start"}`}>
+          {!isUser && (
+            <div className={`w-1.5 h-1.5 rounded-full ${accentDots[creatureType] || accentDots.frog}`} />
+          )}
+          <span className="text-[11px] text-muted-foreground font-medium">
+            {sender}
+          </span>
         </div>
         <div
-          className={`${bgColor} px-4 py-2.5 rounded-2xl text-sm leading-relaxed text-foreground`}
+          className={`${bgColor} px-4 py-3 rounded-[20px] text-[15px] leading-relaxed text-foreground`}
           style={{
-            boxShadow: "0 2px 8px hsla(0, 0%, 0%, 0.2)",
+            boxShadow: isUser
+              ? "0 2px 12px hsla(0, 0%, 0%, 0.15)"
+              : "0 2px 16px hsla(0, 0%, 0%, 0.25)",
           }}
         >
           {streaming ? displayedText : message}
           {streaming && !streamDone && (
-            <span className="inline-block w-[2px] h-[14px] bg-foreground/50 ml-0.5 animate-pulse" />
+            <span className="inline-block w-[2px] h-[15px] bg-foreground/40 ml-0.5 animate-pulse" />
           )}
         </div>
       </div>
