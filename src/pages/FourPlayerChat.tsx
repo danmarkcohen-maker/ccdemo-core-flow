@@ -76,8 +76,8 @@ const FourPlayerChat: React.FC = () => {
       <BackButton />
       <FrogCreature opacity={0.08} speaking={speakingCreature === "frog"} className="top-[5%] left-[5%]" />
       <OwlCreature opacity={entered ? 0.08 : 0} speaking={speakingCreature === "owl"} className="top-[5%] right-[5%] transition-opacity duration-[2000ms]" />
-      <RobotCreature opacity={entered ? 0.08 : 0} speaking={speakingCreature === "robot"} className="bottom-[15%] left-[5%] transition-opacity duration-[2000ms]" style={{ transitionDelay: "500ms" }} />
-      <FoxCreature opacity={entered ? 0.08 : 0} speaking={speakingCreature === "fox"} className="bottom-[15%] right-[5%] transition-opacity duration-[2000ms]" style={{ transitionDelay: "1000ms" }} />
+      <RobotCreature opacity={entered ? 0.08 : 0} speaking={speakingCreature === "robot"} className="bottom-[15%] left-[5%] transition-opacity duration-[2000ms] delay-500" />
+      <FoxCreature opacity={entered ? 0.08 : 0} speaking={speakingCreature === "fox"} className="bottom-[15%] right-[5%] transition-opacity duration-[2000ms] delay-1000" />
 
       <div className="relative z-10 flex flex-col h-full">
         <div className="flex items-center justify-center py-4 border-b border-border/30">
