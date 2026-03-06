@@ -93,14 +93,14 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
             />
           </div>
 
-          {/* Left eye socket bump - green shell wrapping around the eye */}
+          {/* Left eye socket bump - extends above the body */}
           <div
             className="absolute z-[5]"
             style={{
-              top: 0,
+              top: "-48px",
               left: 0,
               width: "140px",
-              height: "110px",
+              height: "120px",
             }}
           >
             {/* Green socket shell */}
@@ -163,10 +163,10 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
           <div
             className="absolute z-[5]"
             style={{
-              top: 0,
+              top: "-48px",
               right: 0,
               width: "140px",
-              height: "110px",
+              height: "120px",
             }}
           >
             {/* Green socket shell */}

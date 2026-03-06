@@ -24,21 +24,6 @@ const DemoMenu: React.FC = () => {
       <Fireflies count={5} color="120, 40%, 45%" />
       
       <div className="relative z-10 flex flex-col h-full py-4 px-4 device-scroll overflow-y-auto">
-        {/* Status bar */}
-        <div className="flex items-center justify-between px-2 pb-3 shrink-0">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-creature-frog-glow" />
-            <span className="text-[12px] text-muted-foreground/60 font-medium" style={fontStyle}>Frog</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-muted-foreground/40" style={fontStyle}>3:42 PM</span>
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="w-[3px] rounded-full bg-creature-frog-glow/60" style={{ height: `${6 + i * 2}px` }} />
-              ))}
-            </div>
-          </div>
-        </div>
 
         {/* Menu items fill the screen */}
         <div className="flex-1 flex flex-col justify-center space-y-2.5">
