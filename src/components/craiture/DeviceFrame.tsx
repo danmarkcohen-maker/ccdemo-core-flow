@@ -25,77 +25,9 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
       />
 
       <div className="relative" style={{ filter: "drop-shadow(0 30px 60px hsla(0,0%,0%,0.5))" }}>
-        {/* Frog eyes - large shiny black orbs like the reference */}
-        <div className="absolute -top-[52px] left-1/2 -translate-x-1/2 flex gap-[200px] z-20">
-          {[false, true].map((isRight, idx) => (
-            <div key={idx} className="relative">
-              {/* Eye socket / base that connects to body */}
-              <div
-                className="absolute -bottom-[18px] left-1/2 -translate-x-1/2 w-[80px] h-[50px] rounded-t-full"
-                style={{
-                  background: `hsl(120, 18%, 42%)`,
-                }}
-              />
-              {/* Main eye sphere - large glossy black */}
-              <div
-                className="relative w-[82px] h-[82px] rounded-full z-10"
-                style={{
-                  background: "radial-gradient(circle at 40% 35%, hsl(0, 0%, 22%), hsl(0, 0%, 6%) 60%, hsl(0, 0%, 3%))",
-                  boxShadow: `
-                    inset 0 -6px 20px hsla(0,0%,0%,0.6),
-                    0 6px 20px hsla(0,0%,0%,0.5),
-                    0 0 0 2px hsla(0,0%,0%,0.2)
-                  `,
-                }}
-              >
-                {/* Glossy highlight */}
-                <div
-                  className="absolute top-[12px] left-[18px] w-[22px] h-[16px] rounded-full"
-                  style={{
-                    background: "radial-gradient(ellipse, hsla(0,0%,100%,0.35), transparent)",
-                    transform: "rotate(-15deg)",
-                  }}
-                />
-                {/* Secondary highlight */}
-                <div
-                  className="absolute top-[14px] left-[40px] w-[8px] h-[6px] rounded-full"
-                  style={{
-                    background: "hsla(0,0%,100%,0.15)",
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* LED dots - small, between the eyes */}
-        <div className="absolute -top-[6px] left-1/2 -translate-x-1/2 flex gap-[6px] z-20">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="w-[4px] h-[4px] rounded-full"
-              style={{
-                background: "hsl(0, 0%, 75%)",
-                boxShadow: "0 0 4px hsla(0, 0%, 100%, 0.3)",
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Speaker grille - right side */}
-        <div className="absolute top-[14px] right-[18px] z-[3] grid grid-cols-4 gap-[3px]">
-          {Array.from({ length: 16 }).map((_, i) => (
-            <div
-              key={i}
-              className="w-[3px] h-[3px] rounded-full"
-              style={{ background: "hsl(120, 12%, 32%)" }}
-            />
-          ))}
-        </div>
-
         {/* Device body */}
         <div
-          className="relative rounded-[40px] overflow-hidden"
+          className="relative rounded-[40px] overflow-visible"
           style={{
             width: "520px",
             background: `
@@ -112,7 +44,7 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
         >
           {/* Felt/fabric texture overlay */}
           <div
-            className="absolute inset-0 pointer-events-none z-[1]"
+            className="absolute inset-0 pointer-events-none z-[1] rounded-[40px]"
             style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23noise)' opacity='0.1'/%3E%3C/svg%3E")`,
               backgroundSize: "100px 100px",
@@ -121,8 +53,86 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
             }}
           />
 
+          {/* Eyes - sitting IN the top corners of the body, partially protruding */}
+          <div className="absolute top-[-28px] left-[36px] z-[10]">
+            <div
+              className="w-[80px] h-[80px] rounded-full"
+              style={{
+                background: "radial-gradient(circle at 40% 35%, hsl(0, 0%, 22%), hsl(0, 0%, 6%) 60%, hsl(0, 0%, 3%))",
+                boxShadow: `
+                  inset 0 -6px 20px hsla(0,0%,0%,0.6),
+                  0 6px 20px hsla(0,0%,0%,0.5),
+                  0 0 0 2px hsla(0,0%,0%,0.2)
+                `,
+              }}
+            >
+              <div
+                className="absolute top-[12px] left-[18px] w-[22px] h-[16px] rounded-full"
+                style={{
+                  background: "radial-gradient(ellipse, hsla(0,0%,100%,0.35), transparent)",
+                  transform: "rotate(-15deg)",
+                }}
+              />
+              <div
+                className="absolute top-[14px] left-[40px] w-[8px] h-[6px] rounded-full"
+                style={{ background: "hsla(0,0%,100%,0.15)" }}
+              />
+            </div>
+          </div>
+
+          <div className="absolute top-[-28px] right-[36px] z-[10]">
+            <div
+              className="w-[80px] h-[80px] rounded-full"
+              style={{
+                background: "radial-gradient(circle at 60% 35%, hsl(0, 0%, 22%), hsl(0, 0%, 6%) 60%, hsl(0, 0%, 3%))",
+                boxShadow: `
+                  inset 0 -6px 20px hsla(0,0%,0%,0.6),
+                  0 6px 20px hsla(0,0%,0%,0.5),
+                  0 0 0 2px hsla(0,0%,0%,0.2)
+                `,
+              }}
+            >
+              <div
+                className="absolute top-[12px] left-[20px] w-[22px] h-[16px] rounded-full"
+                style={{
+                  background: "radial-gradient(ellipse, hsla(0,0%,100%,0.35), transparent)",
+                  transform: "rotate(-15deg)",
+                }}
+              />
+              <div
+                className="absolute top-[14px] left-[42px] w-[8px] h-[6px] rounded-full"
+                style={{ background: "hsla(0,0%,100%,0.15)" }}
+              />
+            </div>
+          </div>
+
+          {/* LED dots - between the eyes */}
+          <div className="absolute top-[10px] left-1/2 -translate-x-1/2 flex gap-[6px] z-[11]">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="w-[4px] h-[4px] rounded-full"
+                style={{
+                  background: "hsl(0, 0%, 75%)",
+                  boxShadow: "0 0 4px hsla(0, 0%, 100%, 0.3)",
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Speaker grille - right side */}
+          <div className="absolute top-[18px] right-[20px] z-[3] grid grid-cols-4 gap-[3px]">
+            {Array.from({ length: 16 }).map((_, i) => (
+              <div
+                key={i}
+                className="w-[3px] h-[3px] rounded-full"
+                style={{ background: "hsl(120, 12%, 32%)" }}
+              />
+            ))}
+          </div>
+
           {/* Screen area */}
-          <div className="px-[18px] pt-[22px] pb-[10px] relative z-[2]">
+          <div className="px-[18px] pt-[50px] pb-[10px] relative z-[2]">
             <div
               className="relative rounded-[16px] overflow-hidden device-screen"
               style={{
@@ -148,7 +158,6 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
                 <div key={i} className="w-[12px] h-[2px] rounded-full" style={{ background: "hsl(120, 10%, 30%)" }} />
               ))}
             </div>
-            {/* Trackpad */}
             <div
               className="w-[30px] h-[18px] rounded-[4px]"
               style={{
