@@ -148,7 +148,7 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
             style={{ top: "-48px", right: "18px" }}
           >
             <div
-              className="w-[80px] h-[80px] rounded-full"
+              className="w-[84px] h-[84px] rounded-full"
               style={{
                 background: "radial-gradient(circle at 62% 32%, hsl(0, 0%, 24%), hsl(0, 0%, 6%) 55%, hsl(0, 0%, 2%))",
                 boxShadow: `
