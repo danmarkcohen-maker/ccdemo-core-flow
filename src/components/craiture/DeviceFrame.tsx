@@ -120,8 +120,9 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
           >
             <div
               className="rounded-full"
-              style={{ width: "90px", height: "78px" }}
               style={{
+                width: "90px",
+                height: "78px",
                 background: "radial-gradient(circle at 38% 32%, hsl(0, 0%, 24%), hsl(0, 0%, 6%) 55%, hsl(0, 0%, 2%))",
                 boxShadow: `
                   inset 0 -6px 20px hsla(0,0%,0%,0.6),
@@ -150,8 +151,9 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
           >
             <div
               className="rounded-full"
-              style={{ width: "90px", height: "78px" }}
               style={{
+                width: "90px",
+                height: "78px",
                 background: "radial-gradient(circle at 62% 32%, hsl(0, 0%, 24%), hsl(0, 0%, 6%) 55%, hsl(0, 0%, 2%))",
                 boxShadow: `
                   inset 0 -6px 20px hsla(0,0%,0%,0.6),
