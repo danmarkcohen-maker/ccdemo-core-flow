@@ -34,37 +34,37 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
           The body shape: a rectangle with two circular bumps at top-left and top-right corners.
           We use an SVG to define this organic frog-head silhouette.
         */}
-        <div className="relative" style={{ width: `${W}px`, marginTop: "50px" }}>
+        <div className="relative" style={{ width: `${W}px`, marginTop: "60px" }}>
           {/* Unified body shape with integrated eye bumps via SVG */}
           <svg
             className="absolute top-0 left-0 pointer-events-none"
             width={W}
             height={780}
             viewBox={`0 0 ${W} 780`}
-            style={{ top: "-48px" }}
+            style={{ top: "-60px" }}
           >
             <defs>
               <clipPath id="frogBodyClip">
-                {/* Single unified path: body rectangle + two eye bump circles at top corners */}
+                {/* Unified path with large eye socket bumps that fully enclose the eyes */}
                 <path d={`
-                  M 0 120
+                  M 0 130
                   L 0 740
                   Q 0 780, 40 780
                   L 480 780
                   Q 520 780, 520 740
-                  L 520 120
-                  L 520 100
-                  C 520 45, 475 0, 450 0
-                  C 430 0, 410 20, 410 48
-                  L 410 70
-                  C 410 90, 390 100, 370 100
-                  L 310 100
-                  L 210 100
-                  L 150 100
-                  C 130 100, 110 90, 110 70
-                  L 110 48
-                  C 110 20, 90 0, 70 0
-                  C 45 0, 0 45, 0 100
+                  L 520 130
+                  L 520 110
+                  C 520 30, 480 0, 440 0
+                  L 420 0
+                  C 395 0, 380 15, 380 40
+                  L 380 60
+                  C 380 95, 355 110, 320 110
+                  L 200 110
+                  C 165 110, 140 95, 140 60
+                  L 140 40
+                  C 140 15, 125 0, 100 0
+                  L 80 0
+                  C 40 0, 0 30, 0 110
                   Z
                 `} />
               </clipPath>
@@ -78,7 +78,8 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
             <g clipPath="url(#frogBodyClip)">
               <rect x="0" y="0" width={W} height="780" fill="hsl(120, 16%, 44%)" />
               {/* Gradient highlights */}
-              <ellipse cx="156" cy="115" rx="140" ry="100" fill="hsl(120, 16%, 50%)" opacity="0.5" />
+              <ellipse cx="70" cy="50" rx="80" ry="60" fill="hsl(120, 16%, 50%)" opacity="0.4" />
+              <ellipse cx="450" cy="50" rx="80" ry="60" fill="hsl(120, 16%, 50%)" opacity="0.4" />
               <ellipse cx="364" cy="600" rx="140" ry="100" fill="hsl(120, 14%, 36%)" opacity="0.4" />
               {/* Felt texture overlay */}
               <rect x="0" y="0" width={W} height="780" filter="url(#feltNoise)" opacity="0.12" />
@@ -86,24 +87,24 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
             {/* Subtle outline */}
             <path
               d={`
-                M 0 120
+                M 0 130
                 L 0 740
                 Q 0 780, 40 780
                 L 480 780
                 Q 520 780, 520 740
-                L 520 120
-                L 520 100
-                C 520 45, 475 0, 450 0
-                C 430 0, 410 20, 410 48
-                L 410 70
-                C 410 90, 390 100, 370 100
-                L 310 100
-                L 210 100
-                L 150 100
-                C 130 100, 110 90, 110 70
-                L 110 48
-                C 110 20, 90 0, 70 0
-                C 45 0, 0 45, 0 100
+                L 520 130
+                L 520 110
+                C 520 30, 480 0, 440 0
+                L 420 0
+                C 395 0, 380 15, 380 40
+                L 380 60
+                C 380 95, 355 110, 320 110
+                L 200 110
+                C 165 110, 140 95, 140 60
+                L 140 40
+                C 140 15, 125 0, 100 0
+                L 80 0
+                C 40 0, 0 30, 0 110
                 Z
               `}
               fill="none"
@@ -112,13 +113,13 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
             />
           </svg>
 
-          {/* Left eye - positioned to sit inside the left bump */}
+          {/* Left eye - centered in left bump */}
           <div
             className="absolute z-[11]"
-            style={{ top: "-36px", left: "15px" }}
+            style={{ top: "-48px", left: "18px" }}
           >
             <div
-              className="w-[80px] h-[80px] rounded-full"
+              className="w-[84px] h-[84px] rounded-full"
               style={{
                 background: "radial-gradient(circle at 38% 32%, hsl(0, 0%, 24%), hsl(0, 0%, 6%) 55%, hsl(0, 0%, 2%))",
                 boxShadow: `
@@ -128,14 +129,14 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
               }}
             >
               <div
-                className="absolute top-[11px] left-[16px] w-[20px] h-[14px] rounded-full"
+                className="absolute top-[12px] left-[17px] w-[22px] h-[15px] rounded-full"
                 style={{
                   background: "radial-gradient(ellipse, hsla(0,0%,100%,0.4), transparent)",
                   transform: "rotate(-20deg)",
                 }}
               />
               <div
-                className="absolute top-[13px] left-[38px] w-[7px] h-[5px] rounded-full"
+                className="absolute top-[14px] left-[40px] w-[7px] h-[5px] rounded-full"
                 style={{ background: "hsla(0,0%,100%,0.15)" }}
               />
             </div>
@@ -144,10 +145,10 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
           {/* Right eye */}
           <div
             className="absolute z-[11]"
-            style={{ top: "-36px", right: "15px" }}
+            style={{ top: "-48px", right: "18px" }}
           >
             <div
-              className="w-[80px] h-[80px] rounded-full"
+              className="w-[84px] h-[84px] rounded-full"
               style={{
                 background: "radial-gradient(circle at 62% 32%, hsl(0, 0%, 24%), hsl(0, 0%, 6%) 55%, hsl(0, 0%, 2%))",
                 boxShadow: `
