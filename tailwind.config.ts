@@ -57,6 +57,23 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        creature: {
+          frog: "hsl(var(--creature-frog))",
+          "frog-glow": "hsl(var(--creature-frog-glow))",
+          owl: "hsl(var(--creature-owl))",
+          "owl-glow": "hsl(var(--creature-owl-glow))",
+          robot: "hsl(var(--creature-robot))",
+          "robot-glow": "hsl(var(--creature-robot-glow))",
+          fox: "hsl(var(--creature-fox))",
+          "fox-glow": "hsl(var(--creature-fox-glow))",
+        },
+        bubble: {
+          user: "hsl(var(--bubble-user))",
+          frog: "hsl(var(--bubble-frog))",
+          owl: "hsl(var(--bubble-owl))",
+          robot: "hsl(var(--bubble-robot))",
+          fox: "hsl(var(--bubble-fox))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -65,20 +82,12 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
       animation: {
