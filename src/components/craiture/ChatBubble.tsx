@@ -65,21 +65,22 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
 
   return (
     <div
-      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3.5`}
+      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}
       style={{ animation: "message-appear 0.3s ease-out" }}
     >
-      <div className={`max-w-[78%] ${isUser ? "items-end" : "items-start"}`}>
-        <div className={`flex items-center gap-1.5 mb-1 px-3 ${isUser ? "justify-end" : "justify-start"}`}>
+      <div className={`max-w-[82%] ${isUser ? "items-end" : "items-start"}`}>
+        <div className={`flex items-center gap-1.5 mb-1 px-2 ${isUser ? "justify-end" : "justify-start"}`}>
           {!isUser && (
-            <div className={`w-1.5 h-1.5 rounded-full ${accentDots[creatureType] || accentDots.frog}`} />
+            <div className={`w-2 h-2 rounded-full ${accentDots[creatureType] || accentDots.frog}`} />
           )}
-          <span className="text-[11px] text-muted-foreground font-medium">
+          <span className="text-[13px] text-muted-foreground font-semibold">
             {sender}
           </span>
         </div>
         <div
-          className={`${bgColor} px-4 py-3 rounded-[20px] text-[15px] leading-relaxed text-foreground`}
+          className={`${bgColor} px-5 py-3.5 rounded-[22px] text-[18px] leading-relaxed text-foreground`}
           style={{
+            fontFamily: "'SF Pro Rounded', -apple-system, sans-serif",
             boxShadow: isUser
               ? "0 2px 12px hsla(0, 0%, 0%, 0.15)"
               : "0 2px 16px hsla(0, 0%, 0%, 0.25)",
@@ -87,7 +88,7 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
         >
           {streaming ? displayedText : message}
           {streaming && !streamDone && (
-            <span className="inline-block w-[2px] h-[15px] bg-foreground/40 ml-0.5 animate-pulse" />
+            <span className="inline-block w-[2px] h-[18px] bg-foreground/40 ml-0.5 animate-pulse" />
           )}
         </div>
       </div>

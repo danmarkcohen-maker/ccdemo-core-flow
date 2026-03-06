@@ -20,14 +20,14 @@ interface Message {
 
 const scriptedMessages: Message[] = [
   { sender: "Sam", message: "What's the fastest animal?", isUser: true, creatureType: "robot" },
-  { sender: "Robot", message: "Processing query... That depends on the environment. Speed varies by medium — land, air, or water.", isUser: false, creatureType: "robot", streaming: true },
-  { sender: "Fox", message: "On land, the cheetah takes the crown. Up to 112 km/h — now that's what I call quick!", isUser: false, creatureType: "fox", streaming: true },
-  { sender: "Owl", message: "But in the air, the peregrine falcon dives at over 380 km/h. Truly the fastest creature alive.", isUser: false, creatureType: "owl", streaming: true },
+  { sender: "Robot", message: "Speed varies by medium — land, air, or water.", isUser: false, creatureType: "robot", streaming: true },
+  { sender: "Fox", message: "On land, the cheetah — 112 km/h! 🦊", isUser: false, creatureType: "fox", streaming: true },
+  { sender: "Owl", message: "In the air, the peregrine falcon dives at 380 km/h.", isUser: false, creatureType: "owl", streaming: true },
   { sender: "Beth", message: "What about in the water?", isUser: true, creatureType: "frog" },
-  { sender: "Frog", message: "Ribbit! The sailfish swims at about 110 km/h. Almost as fast as a cheetah runs!", isUser: false, creatureType: "frog", streaming: true },
-  { sender: "Leo", message: "Which one would win in a race?", isUser: true, creatureType: "fox" },
-  { sender: "Robot", message: "Insufficient data. The variables are incompatible. But the falcon's dive speed would win any combined metric.", isUser: false, creatureType: "robot", streaming: true },
+  { sender: "Frog", message: "The sailfish! About 110 km/h 🐸", isUser: false, creatureType: "frog", streaming: true },
 ];
+
+const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
 
 const FourPlayerChat: React.FC = () => {
   const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
@@ -63,14 +63,14 @@ const FourPlayerChat: React.FC = () => {
   return (
     <DeviceFrame>
       <BackButton />
-      <FrogCreature opacity={0.14} size={280} speaking={speakingCreature === "frog"} className="top-[3%] left-[2%]" />
+      <FrogCreature opacity={0.14} size={240} speaking={speakingCreature === "frog"} className="top-[3%] left-[2%]" />
       <OwlCreature opacity={entered ? 0.14 : 0} speaking={speakingCreature === "owl"} className="top-[3%] right-[2%] transition-opacity duration-[2000ms]" />
-      <RobotCreature opacity={entered ? 0.14 : 0} speaking={speakingCreature === "robot"} className="bottom-[12%] left-[2%] transition-opacity duration-[2000ms] delay-500" />
-      <FoxCreature opacity={entered ? 0.14 : 0} speaking={speakingCreature === "fox"} className="bottom-[12%] right-[2%] transition-opacity duration-[2000ms] delay-1000" />
+      <RobotCreature opacity={entered ? 0.14 : 0} speaking={speakingCreature === "robot"} className="bottom-[12%] left-[2%] transition-opacity duration-[2000ms]" />
+      <FoxCreature opacity={entered ? 0.14 : 0} speaking={speakingCreature === "fox"} className="bottom-[12%] right-[2%] transition-opacity duration-[2000ms]" />
 
       <div className="relative z-10 flex flex-col h-full">
-        <div className="flex items-center justify-center py-4">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-center py-3">
+          <div className="flex items-center gap-2">
             {[
               { name: "Beth", color: "bg-creature-frog-glow" },
               { name: "Chloe", color: "bg-creature-owl-glow" },
@@ -80,22 +80,22 @@ const FourPlayerChat: React.FC = () => {
               <React.Fragment key={p.name}>
                 {i > 0 && <span className="text-muted-foreground/20">·</span>}
                 <div className="flex items-center gap-1">
-                  <div className={`w-1.5 h-1.5 rounded-full ${p.color}`} />
-                  <span className="text-xs text-foreground/50">{p.name}</span>
+                  <div className={`w-2 h-2 rounded-full ${p.color}`} />
+                  <span className="text-[13px] text-foreground/55 font-medium" style={fontStyle}>{p.name}</span>
                 </div>
               </React.Fragment>
             ))}
           </div>
         </div>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3" style={{ scrollBehavior: "smooth" }}>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-2" style={{ scrollBehavior: "smooth" }}>
           {visibleMessages.map((msg, i) => (
             <ChatBubble key={i} sender={msg.sender} message={msg.message} isUser={msg.isUser} creatureType={msg.creatureType} streaming={msg.streaming} />
           ))}
           {showThinking && <ThinkingDots />}
         </div>
 
-        <ChatInput placeholder="> Type your message..." />
+        <ChatInput placeholder="Type a message..." />
       </div>
     </DeviceFrame>
   );

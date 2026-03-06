@@ -7,11 +7,11 @@ interface ThinkingDotsProps {
 const ThinkingDots: React.FC<ThinkingDotsProps> = () => {
   return (
     <div className="flex justify-start mb-3" style={{ animation: "message-appear 0.25s ease-out" }}>
-      <div className="bg-secondary px-5 py-3 rounded-2xl flex items-center gap-1.5">
+      <div className="bg-secondary px-6 py-4 rounded-[22px] flex items-center gap-2">
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="w-2 h-2 rounded-full bg-muted-foreground"
+            className="w-2.5 h-2.5 rounded-full bg-muted-foreground"
             style={{
               animation: `thinking-dot 1.4s ease-in-out ${i * 0.2}s infinite`,
             }}

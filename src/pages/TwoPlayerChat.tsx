@@ -18,10 +18,12 @@ interface Message {
 
 const scriptedMessages: Message[] = [
   { sender: "Beth", message: "Why do frogs jump?", isUser: true, creatureType: "frog" },
-  { sender: "Frog", message: "Ribbit! Frogs have incredibly powerful legs designed for jumping. It's how we escape predators and catch insects!", isUser: false, creatureType: "frog", streaming: true },
+  { sender: "Frog", message: "Ribbit! Our legs are like built-in trampolines! 🐸", isUser: false, creatureType: "frog", streaming: true },
   { sender: "Chloe", message: "Are frogs good jumpers compared to other animals?", isUser: true, creatureType: "owl" },
-  { sender: "Owl", message: "Excellent question! Frogs are among the best jumpers relative to their body size. Some species can leap over 20 times their own length.", isUser: false, creatureType: "owl", streaming: true },
+  { sender: "Owl", message: "Some species can leap over 20 times their own length. Truly remarkable.", isUser: false, creatureType: "owl", streaming: true },
 ];
+
+const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
 
 const TwoPlayerChat: React.FC = () => {
   const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
@@ -57,34 +59,32 @@ const TwoPlayerChat: React.FC = () => {
   return (
     <DeviceFrame>
       <BackButton />
-      <FrogCreature opacity={0.2} size={350} speaking={speakingCreature === "frog"} className="top-[8%] left-[2%]" />
-      <OwlCreature opacity={entered ? 0.2 : 0} speaking={speakingCreature === "owl"} className="top-[8%] right-[2%] transition-opacity duration-[2000ms]" />
-
-      <div className="absolute top-0 left-0 right-0 h-28 z-[2] pointer-events-none" style={{ background: "linear-gradient(to bottom, hsla(120, 20%, 12%, 0.1) 0%, transparent 100%)" }} />
+      <FrogCreature opacity={0.2} size={300} speaking={speakingCreature === "frog"} className="top-[5%] left-[2%]" />
+      <OwlCreature opacity={entered ? 0.2 : 0} speaking={speakingCreature === "owl"} className="top-[5%] right-[2%] transition-opacity duration-[2000ms]" />
 
       <div className="relative z-10 flex flex-col h-full">
-        <div className="flex items-center justify-center py-4">
+        <div className="flex items-center justify-center py-3">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-creature-frog-glow" />
-              <span className="text-xs text-foreground/60">Beth</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-creature-frog-glow" />
+              <span className="text-[14px] text-foreground/65 font-medium" style={fontStyle}>Beth</span>
             </div>
             <span className="text-muted-foreground/30">·</span>
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-creature-owl-glow" />
-              <span className="text-xs text-foreground/60">Chloe</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-creature-owl-glow" />
+              <span className="text-[14px] text-foreground/65 font-medium" style={fontStyle}>Chloe</span>
             </div>
           </div>
         </div>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3" style={{ scrollBehavior: "smooth" }}>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-2" style={{ scrollBehavior: "smooth" }}>
           {visibleMessages.map((msg, i) => (
             <ChatBubble key={i} sender={msg.sender} message={msg.message} isUser={msg.isUser} creatureType={msg.creatureType} streaming={msg.streaming} />
           ))}
           {showThinking && <ThinkingDots />}
         </div>
 
-        <ChatInput placeholder="> Type your message..." />
+        <ChatInput placeholder="Type a message..." />
       </div>
     </DeviceFrame>
   );
