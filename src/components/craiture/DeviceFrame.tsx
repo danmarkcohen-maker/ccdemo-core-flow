@@ -34,7 +34,7 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
           The body shape: a rectangle with two circular bumps at top-left and top-right corners.
           We use an SVG to define this organic frog-head silhouette.
         */}
-        <div className="relative" style={{ width: `${W}px`, marginTop: "50px" }}>
+        <div className="relative" style={{ width: `${W}px`, marginTop: "60px" }}>
           {/* Unified body shape with integrated eye bumps via SVG */}
           <svg
             className="absolute top-0 left-0 pointer-events-none"
