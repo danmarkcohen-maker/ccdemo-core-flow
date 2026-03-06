@@ -17,7 +17,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   disabled = false,
 }) => {
   return (
-    <div className="flex items-center gap-2 p-3 bg-background/80 backdrop-blur-sm border-t border-border">
+    <div className="flex items-center gap-2.5 p-3.5 bg-background/60 backdrop-blur-md border-t border-border/20">
       <input
         type="text"
         value={value}
@@ -25,12 +25,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
         onKeyDown={(e) => e.key === "Enter" && onSend?.()}
         placeholder={placeholder}
         disabled={disabled}
-        className="flex-1 bg-secondary rounded-full px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none border border-border focus:border-ring transition-colors"
+        className="flex-1 bg-secondary/80 rounded-2xl px-5 py-3 text-[15px] text-foreground placeholder:text-muted-foreground/60 outline-none border border-border/30 focus:border-creature-frog-glow/50 transition-all duration-300"
+        style={{
+          boxShadow: "inset 0 2px 8px hsla(0, 0%, 0%, 0.15)",
+        }}
       />
       <button
         onClick={onSend}
         disabled={disabled || !value}
-        className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-30"
+        className="w-10 h-10 rounded-2xl bg-secondary/80 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200 disabled:opacity-20"
       >
         <Send size={16} />
       </button>

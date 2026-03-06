@@ -4,61 +4,61 @@
 
 @layer base {
   :root {
-    --background: 230 15% 10%;
-    --foreground: 220 15% 85%;
+    --background: 230 18% 8%;
+    --foreground: 35 15% 88%;
 
-    --card: 230 15% 13%;
-    --card-foreground: 220 15% 85%;
+    --card: 230 16% 12%;
+    --card-foreground: 35 15% 88%;
 
-    --popover: 230 15% 13%;
-    --popover-foreground: 220 15% 85%;
+    --popover: 230 16% 12%;
+    --popover-foreground: 35 15% 88%;
 
-    --primary: 220 15% 85%;
-    --primary-foreground: 230 15% 10%;
+    --primary: 35 15% 88%;
+    --primary-foreground: 230 18% 8%;
 
-    --secondary: 230 12% 18%;
-    --secondary-foreground: 220 15% 85%;
+    --secondary: 230 14% 15%;
+    --secondary-foreground: 35 15% 88%;
 
-    --muted: 230 12% 18%;
-    --muted-foreground: 220 10% 55%;
+    --muted: 230 14% 15%;
+    --muted-foreground: 35 10% 50%;
 
-    --accent: 230 12% 22%;
-    --accent-foreground: 220 15% 85%;
+    --accent: 230 14% 20%;
+    --accent-foreground: 35 15% 88%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 230 12% 20%;
-    --input: 230 12% 20%;
-    --ring: 220 15% 40%;
+    --border: 230 14% 18%;
+    --input: 230 14% 18%;
+    --ring: 120 25% 35%;
 
     --radius: 0.75rem;
 
     /* Creature accent colors */
     --creature-frog: 120 30% 28%;
-    --creature-frog-glow: 120 35% 35%;
+    --creature-frog-glow: 120 40% 40%;
     --creature-owl: 35 45% 40%;
-    --creature-owl-glow: 35 50% 50%;
+    --creature-owl-glow: 35 55% 55%;
     --creature-robot: 210 30% 45%;
-    --creature-robot-glow: 210 40% 55%;
+    --creature-robot-glow: 210 45% 60%;
     --creature-fox: 20 55% 42%;
-    --creature-fox-glow: 20 60% 52%;
+    --creature-fox-glow: 20 65% 55%;
 
     /* Chat bubble colors */
-    --bubble-user: 230 12% 22%;
-    --bubble-frog: 120 25% 20%;
-    --bubble-owl: 35 30% 22%;
-    --bubble-robot: 210 25% 22%;
-    --bubble-fox: 20 35% 22%;
+    --bubble-user: 230 14% 20%;
+    --bubble-frog: 120 28% 18%;
+    --bubble-owl: 35 35% 20%;
+    --bubble-robot: 210 28% 20%;
+    --bubble-fox: 20 40% 20%;
 
-    --sidebar-background: 230 15% 10%;
-    --sidebar-foreground: 220 15% 85%;
-    --sidebar-primary: 220 15% 85%;
-    --sidebar-primary-foreground: 230 15% 10%;
-    --sidebar-accent: 230 12% 18%;
-    --sidebar-accent-foreground: 220 15% 85%;
-    --sidebar-border: 230 12% 20%;
-    --sidebar-ring: 220 15% 40%;
+    --sidebar-background: 230 18% 8%;
+    --sidebar-foreground: 35 15% 88%;
+    --sidebar-primary: 35 15% 88%;
+    --sidebar-primary-foreground: 230 18% 8%;
+    --sidebar-accent: 230 14% 15%;
+    --sidebar-accent-foreground: 35 15% 88%;
+    --sidebar-border: 230 14% 18%;
+    --sidebar-ring: 120 25% 35%;
   }
 }
 
@@ -69,39 +69,39 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 }
 
 /* Creature animations */
 @keyframes creature-breathe {
   0%, 100% { transform: scale(1) translateY(0); }
-  50% { transform: scale(1.03) translateY(-4px); }
+  50% { transform: scale(1.04) translateY(-5px); }
 }
 
 @keyframes creature-blink {
-  0%, 90%, 100% { opacity: 1; }
-  95% { opacity: 0; }
+  0%, 88%, 100% { opacity: 1; }
+  93% { opacity: 0; }
 }
 
 @keyframes thinking-dot {
-  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-  40% { opacity: 1; transform: scale(1); }
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.7); }
+  40% { opacity: 1; transform: scale(1.1); }
 }
 
 @keyframes message-appear {
-  0% { opacity: 0; transform: scale(0.95) translateY(8px); }
+  0% { opacity: 0; transform: scale(0.93) translateY(10px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 @keyframes edge-glow {
-  0%, 100% { box-shadow: inset 0 0 30px 5px hsla(120, 30%, 28%, 0); }
-  50% { box-shadow: inset 0 0 30px 5px hsla(120, 30%, 28%, 0.3); }
+  0%, 100% { box-shadow: inset 0 0 40px 8px hsla(120, 35%, 30%, 0); }
+  50% { box-shadow: inset 0 0 40px 8px hsla(120, 35%, 30%, 0.25); }
 }
 
 @keyframes gentle-float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  50% { transform: translateY(-8px); }
 }
 
 @keyframes text-reveal {
@@ -117,5 +117,29 @@
 
 @keyframes pulse-soft {
   0%, 100% { opacity: 0.15; }
-  50% { opacity: 0.25; }
+  50% { opacity: 0.35; }
+}
+
+@keyframes ambient-glow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.08); }
+}
+
+@keyframes firefly {
+  0%, 100% { opacity: 0; transform: translate(0, 0); }
+  20% { opacity: 0.6; }
+  50% { opacity: 0.8; transform: translate(15px, -20px); }
+  80% { opacity: 0.4; }
+}
+
+@keyframes screen-on {
+  0% { opacity: 0; filter: brightness(0); }
+  30% { opacity: 0.5; filter: brightness(0.3); }
+  60% { opacity: 0.8; filter: brightness(0.7); }
+  100% { opacity: 1; filter: brightness(1); }
+}
+
+@keyframes title-glow {
+  0%, 100% { text-shadow: 0 0 20px hsla(120, 35%, 40%, 0.2), 0 0 40px hsla(120, 35%, 40%, 0.1); }
+  50% { text-shadow: 0 0 30px hsla(120, 35%, 40%, 0.4), 0 0 60px hsla(120, 35%, 40%, 0.15); }
 }

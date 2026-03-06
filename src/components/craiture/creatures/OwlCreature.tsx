@@ -11,8 +11,8 @@ const OwlCreature: React.FC<OwlCreatureProps> = ({ opacity = 0.15, speaking = fa
     <div
       className={`absolute pointer-events-none select-none ${className}`}
       style={{
-        opacity: speaking ? Math.min(opacity + 0.1, 0.35) : opacity,
-        filter: "blur(2px)",
+        opacity: speaking ? Math.min(opacity + 0.12, 0.4) : opacity,
+        filter: "blur(0.5px)",
         animation: "creature-breathe 5s ease-in-out infinite",
         transition: "opacity 0.8s ease",
       }}
