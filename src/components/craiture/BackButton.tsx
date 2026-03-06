@@ -7,9 +7,9 @@ const BackButton: React.FC = () => {
   return (
     <button
       onClick={() => navigate("/")}
-      className="absolute top-4 left-4 z-50 w-9 h-9 rounded-full bg-secondary/80 backdrop-blur flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+      className="absolute top-3 left-3 z-50 w-10 h-10 rounded-full bg-secondary/80 backdrop-blur-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors active:scale-90"
     >
-      <ArrowLeft size={16} />
+      <ArrowLeft size={20} />
     </button>
   );
 };

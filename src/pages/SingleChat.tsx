@@ -13,10 +13,12 @@ interface Message {
   streaming?: boolean;
 }
 
-const scriptedMessages: Message[] = [
-  { sender: "Frog", message: "Hi there Beth! What's on your mind?", isUser: false, streaming: true },
-  { sender: "Beth", message: "Why do frogs jump?", isUser: true },
-  { sender: "Frog", message: "Ribbit! Frogs jump because their legs are extremely powerful. Our back legs can be longer than our entire body, which gives us incredible spring. It's like having built-in trampolines!", isUser: false, streaming: true },
+const scriptedResponses: Record<string, string> = {
+  default: "Ribbit! That's a great question. Let me think about it... 🐸",
+};
+
+const initialMessages: Message[] = [
+  { sender: "Frog", message: "Hi there Beth! What's on your mind today? 🐸", isUser: false, streaming: true },
 ];
 
 const SingleChat: React.FC = () => {
@@ -25,7 +27,6 @@ const SingleChat: React.FC = () => {
   const [speakingCreature, setSpeakingCreature] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [scriptIndex, setScriptIndex] = useState(0);
   const [demoStarted, setDemoStarted] = useState(false);
 
   useEffect(() => {
@@ -33,67 +34,72 @@ const SingleChat: React.FC = () => {
     return () => clearTimeout(t);
   }, []);
 
+  // Show initial greeting
   useEffect(() => {
-    if (!demoStarted || scriptIndex >= scriptedMessages.length) return;
-    const msg = scriptedMessages[scriptIndex];
-    const baseDelay = scriptIndex === 0 ? 500 : 1500;
-
-    if (!msg.isUser) {
-      const t1 = setTimeout(() => {
-        setShowThinking(true);
-        setSpeakingCreature(true);
-      }, baseDelay);
-      const t2 = setTimeout(() => {
-        setShowThinking(false);
-        setVisibleMessages((prev) => [...prev, msg]);
-        setTimeout(() => setSpeakingCreature(false), 2000);
-        setScriptIndex((i) => i + 1);
-      }, baseDelay + 1800);
-      return () => { clearTimeout(t1); clearTimeout(t2); };
-    } else {
-      const t = setTimeout(() => {
-        setVisibleMessages((prev) => [...prev, msg]);
-        setScriptIndex((i) => i + 1);
-      }, baseDelay);
-      return () => clearTimeout(t);
-    }
-  }, [demoStarted, scriptIndex]);
+    if (!demoStarted) return;
+    setSpeakingCreature(true);
+    setShowThinking(true);
+    const t = setTimeout(() => {
+      setShowThinking(false);
+      setVisibleMessages([initialMessages[0]]);
+      setTimeout(() => setSpeakingCreature(false), 2000);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [demoStarted]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [visibleMessages, showThinking]);
+
+  const handleSend = () => {
+    if (!inputValue.trim()) return;
+    const userMsg: Message = { sender: "Beth", message: inputValue.trim(), isUser: true };
+    setVisibleMessages((prev) => [...prev, userMsg]);
+    setInputValue("");
+
+    // Simulate frog response
+    setTimeout(() => {
+      setShowThinking(true);
+      setSpeakingCreature(true);
+    }, 600);
+    setTimeout(() => {
+      setShowThinking(false);
+      const response: Message = {
+        sender: "Frog",
+        message: scriptedResponses.default,
+        isUser: false,
+        streaming: true,
+      };
+      setVisibleMessages((prev) => [...prev, response]);
+      setTimeout(() => setSpeakingCreature(false), 2000);
+    }, 2400);
+  };
 
   return (
     <DeviceFrame>
       <BackButton />
       <FrogCreature
         opacity={0.25}
-        size={480}
+        size={400}
         speaking={speakingCreature}
-        className="top-[12%] left-1/2 -translate-x-1/2"
-      />
-
-      {/* Ambient gradient overlay */}
-      <div
-        className="absolute top-0 left-0 right-0 h-32 z-[2] pointer-events-none"
-        style={{
-          background: "linear-gradient(to bottom, hsla(120, 25%, 15%, 0.15) 0%, transparent 100%)",
-        }}
+        className="top-[10%] left-1/2 -translate-x-1/2"
       />
 
       <div className="relative z-10 flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-center py-4">
+        <div className="flex items-center justify-center py-3">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-creature-frog-glow" />
-            <span className="text-sm text-foreground/70 font-light">Beth & Frog</span>
+            <div className="w-2.5 h-2.5 rounded-full bg-creature-frog-glow" />
+            <span className="text-[17px] text-foreground/80 font-semibold" style={{ fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" }}>
+              Beth & Frog
+            </span>
           </div>
         </div>
 
         {/* Messages */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 py-3"
+          className="flex-1 overflow-y-auto px-4 py-2"
           style={{ scrollBehavior: "smooth" }}
         >
           {visibleMessages.map((msg, i) => (
@@ -109,7 +115,12 @@ const SingleChat: React.FC = () => {
           {showThinking && <ThinkingDots />}
         </div>
 
-        <ChatInput value={inputValue} onChange={setInputValue} placeholder="> Type your message..." />
+        <ChatInput
+          value={inputValue}
+          onChange={setInputValue}
+          onSend={handleSend}
+          placeholder="Type a message..."
+        />
       </div>
     </DeviceFrame>
   );

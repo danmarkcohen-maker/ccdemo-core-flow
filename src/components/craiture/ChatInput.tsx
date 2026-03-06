@@ -13,11 +13,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
   value = "",
   onChange,
   onSend,
-  placeholder = "> Type your message...",
+  placeholder = "Type a message...",
   disabled = false,
 }) => {
   return (
-    <div className="flex items-center gap-2.5 p-3.5 bg-background/60 backdrop-blur-md border-t border-border/20">
+    <div className="flex items-center gap-3 p-3 bg-background/70 backdrop-blur-md border-t border-white/[0.06]">
       <input
         type="text"
         value={value}
@@ -25,17 +25,21 @@ const ChatInput: React.FC<ChatInputProps> = ({
         onKeyDown={(e) => e.key === "Enter" && onSend?.()}
         placeholder={placeholder}
         disabled={disabled}
-        className="flex-1 bg-secondary/80 rounded-2xl px-5 py-3 text-[15px] text-foreground placeholder:text-muted-foreground/60 outline-none border border-border/30 focus:border-creature-frog-glow/50 transition-all duration-300"
+        className="flex-1 bg-secondary/80 rounded-full px-6 py-3.5 text-[18px] text-foreground placeholder:text-muted-foreground/50 outline-none border border-white/[0.06] focus:border-creature-frog-glow/50 transition-all duration-300"
         style={{
-          boxShadow: "inset 0 2px 8px hsla(0, 0%, 0%, 0.15)",
+          fontFamily: "'SF Pro Rounded', -apple-system, sans-serif",
+          boxShadow: "inset 0 2px 8px hsla(0, 0%, 0%, 0.2)",
         }}
       />
       <button
         onClick={onSend}
         disabled={disabled || !value}
-        className="w-10 h-10 rounded-2xl bg-secondary/80 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200 disabled:opacity-20"
+        className="w-12 h-12 rounded-full bg-creature-frog flex items-center justify-center text-foreground hover:bg-creature-frog-glow transition-all duration-200 disabled:opacity-20 active:scale-90"
+        style={{
+          boxShadow: "0 4px 15px hsla(120, 30%, 30%, 0.3)",
+        }}
       >
-        <Send size={16} />
+        <Send size={20} />
       </button>
     </div>
   );
