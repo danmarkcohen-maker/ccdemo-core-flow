@@ -1,10 +1,12 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import DeviceFrame from "@/components/craiture/DeviceFrame";
 import OnboardingScreen from "@/components/craiture/screens/OnboardingScreen";
 import ChatScreen from "@/components/craiture/screens/ChatScreen";
 import type { ChatMessage } from "@/components/craiture/screens/ChatScreen";
 import TwoPlayerScreen from "@/components/craiture/screens/TwoPlayerScreen";
+import type { TwoPlayerHandle } from "@/components/craiture/screens/TwoPlayerScreen";
 import FourPlayerScreen from "@/components/craiture/screens/FourPlayerScreen";
+import type { FourPlayerHandle } from "@/components/craiture/screens/FourPlayerScreen";
 import { motion, AnimatePresence } from "framer-motion";
 
 type Screen = "onboarding" | "chat";
@@ -129,7 +131,7 @@ const DeviceExperience: React.FC = () => {
                 className="absolute inset-0"
                 style={{ background: "hsl(230, 18%, 4%)" }}
               >
-                <TwoPlayerScreen onExit={handleOverlayExit} />
+                <TwoPlayerScreen ref={twoPlayerRef} onExit={handleOverlayExit} />
               </motion.div>
             )}
             {fourPlayerActive && (
@@ -142,7 +144,7 @@ const DeviceExperience: React.FC = () => {
                 className="absolute inset-0"
                 style={{ background: "hsl(230, 18%, 4%)" }}
               >
-                <FourPlayerScreen onExit={handleOverlayExit} />
+                <FourPlayerScreen ref={fourPlayerRef} onExit={handleOverlayExit} />
               </motion.div>
             )}
           </AnimatePresence>
