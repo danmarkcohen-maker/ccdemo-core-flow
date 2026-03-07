@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 import FrogCreature from "@/components/craiture/creatures/FrogCreature";
 import OwlCreature from "@/components/craiture/creatures/OwlCreature";
 import RobotCreature from "@/components/craiture/creatures/RobotCreature";
@@ -17,7 +17,7 @@ interface Message {
   streaming?: boolean;
 }
 
-type Phase = "hi-five" | "confirm" | "connected" | "chat" | "departing";
+type Phase = "hi-five" | "confirm" | "connecting" | "connected" | "chat" | "departing";
 
 interface FourPlayerScreenProps {
   onExit: () => void;
@@ -35,7 +35,11 @@ const chatMessages: Message[] = [
 
 const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
 
-const FourPlayerScreen: React.FC<FourPlayerScreenProps> = ({ onExit }) => {
+export interface FourPlayerHandle {
+  triggerDepart: () => void;
+}
+
+const FourPlayerScreen = forwardRef<FourPlayerHandle, FourPlayerScreenProps>(({ onExit }, ref) => {
   const [phase, setPhase] = useState<Phase>("hi-five");
   const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
   const [showThinking, setShowThinking] = useState(false);
@@ -43,14 +47,21 @@ const FourPlayerScreen: React.FC<FourPlayerScreenProps> = ({ onExit }) => {
   const [scriptIndex, setScriptIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Hi-Five flow
+  useImperativeHandle(ref, () => ({
+    triggerDepart: () => setPhase("departing"),
+  }));
+
+  // Hi-Five flash → confirm
   useEffect(() => {
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    timers.push(setTimeout(() => setPhase("confirm"), 1000));
-    timers.push(setTimeout(() => setPhase("connected"), 2800));
-    timers.push(setTimeout(() => setPhase("chat"), 4500));
-    return () => timers.forEach(clearTimeout);
+    const t = setTimeout(() => setPhase("confirm"), 1000);
+    return () => clearTimeout(t);
   }, []);
+
+  const handleConfirm = () => {
+    setPhase("connecting");
+    setTimeout(() => setPhase("connected"), 1500);
+    setTimeout(() => setPhase("chat"), 3200);
+  };
 
   // Chat playback
   useEffect(() => {
@@ -76,7 +87,7 @@ const FourPlayerScreen: React.FC<FourPlayerScreenProps> = ({ onExit }) => {
   // Departing → exit
   useEffect(() => {
     if (phase !== "departing") return;
-    const t = setTimeout(() => onExit(), 3500);
+    const t = setTimeout(() => onExit(), 4500);
     return () => clearTimeout(t);
   }, [phase, onExit]);
 
@@ -84,7 +95,7 @@ const FourPlayerScreen: React.FC<FourPlayerScreenProps> = ({ onExit }) => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [visibleMessages, showThinking]);
 
-  const isPreChat = ["hi-five", "confirm", "connected"].includes(phase);
+  const isPreChat = ["hi-five", "confirm", "connecting", "connected"].includes(phase);
 
   return (
     <>
@@ -126,7 +137,7 @@ const FourPlayerScreen: React.FC<FourPlayerScreenProps> = ({ onExit }) => {
                 </motion.div>
               )}
 
-              {/* Confirmation */}
+              {/* Confirmation - awaits user tap */}
               {phase === "confirm" && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -145,8 +156,9 @@ const FourPlayerScreen: React.FC<FourPlayerScreenProps> = ({ onExit }) => {
                   <p className="text-[16px] font-semibold text-foreground/85 text-center leading-relaxed" style={fontStyle}>
                     Hi-Five with Chloe's Owl,<br />Juliet's Robot & Cara's Fox?
                   </p>
-                  <motion.div
-                    className="px-8 py-3 rounded-full text-[16px] font-semibold text-foreground/90"
+                  <motion.button
+                    onClick={handleConfirm}
+                    className="px-8 py-3 rounded-full text-[16px] font-semibold text-foreground/90 cursor-pointer active:scale-95 transition-transform"
                     style={{
                       background: "hsla(120, 40%, 40%, 0.3)",
                       border: "2px solid hsla(120, 40%, 50%, 0.4)",
@@ -154,10 +166,31 @@ const FourPlayerScreen: React.FC<FourPlayerScreenProps> = ({ onExit }) => {
                     }}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.5 }}
+                    transition={{ delay: 0.3 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     Yes! ✨
-                  </motion.div>
+                  </motion.button>
+                </motion.div>
+              )}
+
+              {/* Connecting - network spin-up */}
+              {phase === "connecting" && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center gap-5"
+                >
+                  <motion.div
+                    className="w-16 h-16 rounded-full border-2 border-t-transparent"
+                    style={{ borderColor: "hsla(120, 40%, 50%, 0.4)", borderTopColor: "transparent" }}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                  />
+                  <p className="text-[14px] text-muted-foreground/50" style={fontStyle}>
+                    Connecting 4 Craitures…
+                  </p>
                 </motion.div>
               )}
 
@@ -201,37 +234,84 @@ const FourPlayerScreen: React.FC<FourPlayerScreenProps> = ({ onExit }) => {
             </motion.div>
           )}
 
-          {/* Departing */}
+          {/* Departing - creatures say goodbye */}
           {phase === "departing" && (
-            <motion.div key="departing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col items-center justify-center px-6 gap-5">
-              <div className="flex items-center gap-6">
-                {["🐸", "🦉", "🤖", "🦊"].map((e, i) => (
-                  <motion.span
+            <motion.div
+              key="departing"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 flex flex-col items-center justify-center px-6 gap-4"
+            >
+              {/* Creatures waving goodbye */}
+              <div className="grid grid-cols-2 gap-6">
+                {[
+                  { emoji: "🐸", name: "Frog", delay: 0.2 },
+                  { emoji: "🦉", name: "Owl", delay: 0.4 },
+                  { emoji: "🤖", name: "Robot", delay: 0.6 },
+                  { emoji: "🦊", name: "Fox", delay: 0.8 },
+                ].map((c, i) => (
+                  <motion.div
                     key={i}
-                    className="text-[32px]"
-                    animate={{ x: (i < 2 ? -1 : 1) * 50, y: (i % 2 === 0 ? -1 : 1) * 30, opacity: 0 }}
-                    transition={{ duration: 3, ease: "easeIn", delay: i * 0.2 }}
+                    className="flex flex-col items-center gap-1"
+                    animate={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 2, ease: "easeIn", delay: 1.8 + c.delay }}
                   >
-                    {e}
-                  </motion.span>
+                    <motion.span
+                      className="text-[36px]"
+                      animate={{ rotate: [0, 15, -15, 15, -15, 0] }}
+                      transition={{ duration: 0.8, repeat: 2, delay: c.delay }}
+                    >
+                      {c.emoji}
+                    </motion.span>
+                    <span className="text-[10px] text-muted-foreground/40" style={fontStyle}>{c.name}</span>
+                  </motion.div>
                 ))}
               </div>
-              <p className="text-[16px] text-muted-foreground/60" style={fontStyle}>Friends waved goodbye…</p>
-              <motion.p
-                className="text-[13px] text-muted-foreground/30"
-                style={fontStyle}
+
+              {/* Goodbye messages */}
+              <motion.div
+                className="flex flex-col items-center gap-2 mt-2"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 1.5 }}
+                transition={{ delay: 0.3 }}
               >
-                Playdate chat deleted
-              </motion.p>
+                <motion.p className="text-[14px] text-foreground/70 italic" style={fontStyle}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+                  "What a party! Ribbit!" 🐸🎉
+                </motion.p>
+                <motion.p className="text-[14px] text-foreground/70 italic" style={fontStyle}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
+                  "Farewell, friends." 🦉
+                </motion.p>
+                <motion.p className="text-[14px] text-foreground/70 italic" style={fontStyle}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
+                  "See ya! Stay wild!" 🦊✨
+                </motion.p>
+              </motion.div>
+
+              {/* Playdate ended notice */}
+              <motion.div
+                className="flex flex-col items-center gap-1 mt-3"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 2.2 }}
+              >
+                <p className="text-[14px] text-muted-foreground/50" style={fontStyle}>
+                  Playdate ended
+                </p>
+                <p className="text-[11px] text-muted-foreground/25" style={fontStyle}>
+                  Chat messages aren't stored anywhere 🔒
+                </p>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
     </>
   );
-};
+});
+
+FourPlayerScreen.displayName = "FourPlayerScreen";
 
 export default FourPlayerScreen;
