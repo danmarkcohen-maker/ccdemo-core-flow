@@ -77,6 +77,10 @@ const DeviceExperience: React.FC = () => {
     }]);
   }, []);
 
+  // Trigger departing phase inside the overlay screen
+  const twoPlayerRef = React.useRef<{ triggerDepart: () => void } | null>(null);
+  const fourPlayerRef = React.useRef<{ triggerDepart: () => void } | null>(null);
+
   const twoPlayerActive = overlay === "two-player";
   const fourPlayerActive = overlay === "four-player";
 
@@ -186,8 +190,8 @@ const DeviceExperience: React.FC = () => {
         </button>
 
         <button
-          onClick={() => overlay === "two-player" ? handleOverlayExit() : handleHiFive("two-player")}
-          disabled={screen === "onboarding"}
+          onClick={() => overlay === "two-player" ? twoPlayerRef.current?.triggerDepart() : handleHiFive("two-player")}
+          disabled={screen === "onboarding" || overlay === "four-player"}
           className="text-left px-4 py-3 rounded-xl text-[14px] font-medium text-muted-foreground/70 hover:text-foreground/80 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-200 active:scale-[0.97] disabled:opacity-30 disabled:pointer-events-none"
           style={{ background: "hsla(230, 14%, 15%, 0.6)", ...fontStyle }}
         >
@@ -195,27 +199,13 @@ const DeviceExperience: React.FC = () => {
         </button>
 
         <button
-          onClick={() => overlay === "four-player" ? handleOverlayExit() : handleHiFive("four-player")}
-          disabled={screen === "onboarding"}
+          onClick={() => overlay === "four-player" ? fourPlayerRef.current?.triggerDepart() : handleHiFive("four-player")}
+          disabled={screen === "onboarding" || overlay === "two-player"}
           className="text-left px-4 py-3 rounded-xl text-[14px] font-medium text-muted-foreground/70 hover:text-foreground/80 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-200 active:scale-[0.97] disabled:opacity-30 disabled:pointer-events-none"
           style={{ background: "hsla(230, 14%, 15%, 0.6)", ...fontStyle }}
         >
           {fourPlayerActive ? "👋 Exit Chat" : "🙌 Hi-Five 3 Friends"}
         </button>
-
-        {/* Current state indicator */}
-        <div className="mt-4 px-4 py-2.5 rounded-xl border border-white/[0.04]" style={{ background: "hsla(230, 14%, 12%, 0.4)" }}>
-          <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/30 font-semibold" style={fontStyle}>
-            Current
-          </p>
-          <p className="text-[13px] text-muted-foreground/60 mt-0.5" style={fontStyle}>
-            {sleeping && "💤 Sleeping"}
-            {!sleeping && screen === "onboarding" && "First Activation"}
-            {!sleeping && screen === "chat" && !overlay && `Chat · ${userName} + Frog`}
-            {!sleeping && twoPlayerActive && "🙌 Hi-Five · 2 Players"}
-            {!sleeping && fourPlayerActive && "🙌 Hi-Five · 4 Players"}
-          </p>
-        </div>
       </div>
     </div>
   );
