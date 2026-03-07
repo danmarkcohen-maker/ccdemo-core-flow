@@ -15,7 +15,7 @@ interface Message {
   streaming?: boolean;
 }
 
-type Phase = "hi-five" | "confirm" | "connected" | "chat" | "departing";
+type Phase = "hi-five" | "confirm" | "connecting" | "connected" | "chat" | "departing";
 
 interface TwoPlayerScreenProps {
   onExit: () => void;
@@ -41,14 +41,18 @@ const TwoPlayerScreen: React.FC<TwoPlayerScreenProps> = ({ onExit }) => {
   const [scriptIndex, setScriptIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Hi-Five flow
+  // Hi-Five flash → confirm
   useEffect(() => {
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    timers.push(setTimeout(() => setPhase("confirm"), 1000));
-    timers.push(setTimeout(() => setPhase("connected"), 2800));
-    timers.push(setTimeout(() => setPhase("chat"), 4500));
-    return () => timers.forEach(clearTimeout);
+    const t = setTimeout(() => setPhase("confirm"), 1000);
+    return () => clearTimeout(t);
   }, []);
+
+  const handleConfirm = () => {
+    setPhase("connecting");
+    // Simulate network spin-up
+    setTimeout(() => setPhase("connected"), 1200);
+    setTimeout(() => setPhase("chat"), 2800);
+  };
 
   // Chat script playback
   useEffect(() => {
@@ -78,11 +82,11 @@ const TwoPlayerScreen: React.FC<TwoPlayerScreenProps> = ({ onExit }) => {
   // Departing → exit
   useEffect(() => {
     if (phase !== "departing") return;
-    const t = setTimeout(() => onExit(), 3000);
+    const t = setTimeout(() => onExit(), 4000);
     return () => clearTimeout(t);
   }, [phase, onExit]);
 
-  const isPreChat = ["hi-five", "confirm", "connected"].includes(phase);
+  const isPreChat = ["hi-five", "confirm", "connecting", "connected"].includes(phase);
 
   return (
     <>
@@ -131,7 +135,7 @@ const TwoPlayerScreen: React.FC<TwoPlayerScreenProps> = ({ onExit }) => {
                 </motion.div>
               )}
 
-              {/* Confirmation */}
+              {/* Confirmation - awaits user tap */}
               {phase === "confirm" && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -146,8 +150,9 @@ const TwoPlayerScreen: React.FC<TwoPlayerScreenProps> = ({ onExit }) => {
                   <p className="text-[18px] font-semibold text-foreground/85 text-center" style={fontStyle}>
                     Hi-Five with Chloe and her Owl?
                   </p>
-                  <motion.div
-                    className="px-8 py-3 rounded-full text-[16px] font-semibold text-foreground/90"
+                  <motion.button
+                    onClick={handleConfirm}
+                    className="px-8 py-3 rounded-full text-[16px] font-semibold text-foreground/90 cursor-pointer active:scale-95 transition-transform"
                     style={{
                       background: "hsla(120, 40%, 40%, 0.3)",
                       border: "2px solid hsla(120, 40%, 50%, 0.4)",
@@ -155,10 +160,31 @@ const TwoPlayerScreen: React.FC<TwoPlayerScreenProps> = ({ onExit }) => {
                     }}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.5 }}
+                    transition={{ delay: 0.3 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     Yes! ✨
-                  </motion.div>
+                  </motion.button>
+                </motion.div>
+              )}
+
+              {/* Connecting - network spin-up */}
+              {phase === "connecting" && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center gap-5"
+                >
+                  <motion.div
+                    className="w-16 h-16 rounded-full border-2 border-t-transparent"
+                    style={{ borderColor: "hsla(120, 40%, 50%, 0.4)", borderTopColor: "transparent" }}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                  />
+                  <p className="text-[14px] text-muted-foreground/50" style={fontStyle}>
+                    Setting up playdate…
+                  </p>
                 </motion.div>
               )}
 
@@ -210,29 +236,88 @@ const TwoPlayerScreen: React.FC<TwoPlayerScreenProps> = ({ onExit }) => {
             </motion.div>
           )}
 
-          {/* Departing */}
+          {/* Departing - creatures say goodbye */}
           {phase === "departing" && (
             <motion.div
               key="departing"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex-1 flex flex-col items-center justify-center px-6 gap-5"
+              className="flex-1 flex flex-col items-center justify-center px-6 gap-4"
             >
-              <div className="flex items-center gap-8">
-                <motion.span className="text-[40px]" animate={{ x: -40, opacity: 0 }} transition={{ duration: 2.5, ease: "easeIn" }}>🐸</motion.span>
-                <motion.span className="text-[40px]" animate={{ x: 40, opacity: 0 }} transition={{ duration: 2.5, ease: "easeIn" }}>🦉</motion.span>
+              {/* Creatures waving */}
+              <div className="flex items-center gap-10">
+                <motion.div
+                  className="flex flex-col items-center gap-1"
+                  animate={{ x: -30, opacity: 0 }}
+                  transition={{ duration: 2.5, ease: "easeIn", delay: 1.5 }}
+                >
+                  <motion.span
+                    className="text-[44px]"
+                    animate={{ rotate: [0, 15, -15, 15, 0] }}
+                    transition={{ duration: 0.6, repeat: 3, delay: 0.3 }}
+                  >
+                    🐸
+                  </motion.span>
+                  <span className="text-[11px] text-muted-foreground/40" style={fontStyle}>Frog</span>
+                </motion.div>
+                <motion.div
+                  className="flex flex-col items-center gap-1"
+                  animate={{ x: 30, opacity: 0 }}
+                  transition={{ duration: 2.5, ease: "easeIn", delay: 1.5 }}
+                >
+                  <motion.span
+                    className="text-[44px]"
+                    animate={{ rotate: [0, -15, 15, -15, 0] }}
+                    transition={{ duration: 0.6, repeat: 3, delay: 0.5 }}
+                  >
+                    🦉
+                  </motion.span>
+                  <span className="text-[11px] text-muted-foreground/40" style={fontStyle}>Owl</span>
+                </motion.div>
               </div>
-              <p className="text-[16px] text-muted-foreground/60" style={fontStyle}>Chloe's Owl waved goodbye…</p>
-              <motion.p
-                className="text-[13px] text-muted-foreground/30"
-                style={fontStyle}
+
+              {/* Goodbye speech bubbles */}
+              <motion.div
+                className="flex flex-col items-center gap-2 mt-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <motion.p
+                  className="text-[15px] text-foreground/70 italic"
+                  style={fontStyle}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  "Bye Chloe! See you soon!" 🐸👋
+                </motion.p>
+                <motion.p
+                  className="text-[15px] text-foreground/70 italic"
+                  style={fontStyle}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.9 }}
+                >
+                  "Until next time, friends." 🦉✨
+                </motion.p>
+              </motion.div>
+
+              {/* Playdate ended notice */}
+              <motion.div
+                className="flex flex-col items-center gap-1 mt-4"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 1.5 }}
+                transition={{ delay: 2 }}
               >
-                Playdate chat deleted
-              </motion.p>
+                <p className="text-[14px] text-muted-foreground/50" style={fontStyle}>
+                  Playdate ended
+                </p>
+                <p className="text-[11px] text-muted-foreground/25" style={fontStyle}>
+                  Chat messages aren't stored anywhere 🔒
+                </p>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
