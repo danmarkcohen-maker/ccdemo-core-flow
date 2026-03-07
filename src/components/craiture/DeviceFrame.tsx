@@ -19,10 +19,10 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
   const bodyR = 40; // body corner radius
 
   return (
-    <div className="flex items-center justify-center min-h-screen" style={{ background: "hsl(220, 15%, 6%)" }}>
+    <div className="relative">
       {/* Ambient glow */}
       <div
-        className="absolute rounded-full blur-[100px] w-[600px] h-[600px]"
+        className="absolute rounded-full blur-[100px] w-[600px] h-[600px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
         style={{
           background: `radial-gradient(circle, hsla(${creatureColor}, 0.12) 0%, transparent 70%)`,
           animation: "ambient-glow 6s ease-in-out infinite",
