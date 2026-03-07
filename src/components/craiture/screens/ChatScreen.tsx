@@ -90,7 +90,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, resumeMode = false })
   };
 
   return (
-    <>
+    <div className="relative h-full overflow-hidden">
       <FrogCreature
         opacity={0.25}
         size={400}
@@ -101,7 +101,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, resumeMode = false })
       <div className="relative z-10 flex flex-col h-full">
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 py-4"
+          className="flex-1 min-h-0 overflow-y-auto px-4 py-4"
           style={{ scrollBehavior: "smooth" }}
         >
           {visibleMessages.map((msg, i) => (
@@ -124,7 +124,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, resumeMode = false })
           placeholder="Type a message..."
         />
       </div>
-    </>
+    </div>
   );
 };
 
