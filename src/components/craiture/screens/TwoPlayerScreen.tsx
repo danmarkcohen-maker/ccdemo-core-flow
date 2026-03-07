@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 import FrogCreature from "@/components/craiture/creatures/FrogCreature";
 import OwlCreature from "@/components/craiture/creatures/OwlCreature";
 import ChatBubble from "@/components/craiture/ChatBubble";
