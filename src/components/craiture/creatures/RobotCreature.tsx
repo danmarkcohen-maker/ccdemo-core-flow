@@ -4,9 +4,11 @@ interface RobotCreatureProps {
   opacity?: number;
   speaking?: boolean;
   className?: string;
+  size?: number;
 }
 
-const RobotCreature: React.FC<RobotCreatureProps> = ({ opacity = 0.15, speaking = false, className = "" }) => {
+const RobotCreature: React.FC<RobotCreatureProps> = ({ opacity = 0.15, speaking = false, className = "", size }) => {
+  const scale = size ? size / 360 : 1;
   return (
     <div
       className={`absolute pointer-events-none select-none ${className}`}
@@ -17,7 +19,7 @@ const RobotCreature: React.FC<RobotCreatureProps> = ({ opacity = 0.15, speaking 
         transition: "opacity 0.8s ease",
       }}
     >
-      <svg width="280" height="360" viewBox="0 0 280 360" fill="none">
+      <svg width={280 * scale} height={360 * scale} viewBox="0 0 280 360" fill="none">
         {/* Antenna */}
         <line x1="140" y1="40" x2="140" y2="80" stroke="hsl(210, 25%, 40%)" strokeWidth="4" />
         <circle cx="140" cy="35" r="8" fill="hsl(210, 40%, 55%)" style={{ animation: "pulse-soft 2s ease-in-out infinite" }} />
