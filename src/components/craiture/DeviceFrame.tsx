@@ -175,16 +175,6 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
             </div>
           </div>
 
-          {/* Speaker grille - between eyes */}
-          <div className="absolute top-[26px] right-[148px] z-[12] grid grid-cols-5 gap-[3px]">
-            {Array.from({ length: 20 }).map((_, i) => (
-              <div
-                key={i}
-                className="w-[3px] h-[3px] rounded-full"
-                style={{ background: "hsl(120, 12%, 32%)" }}
-              />
-            ))}
-          </div>
 
           {/* LED dots */}
           <div className="absolute top-[34px] left-1/2 -translate-x-1/2 flex gap-[6px] z-[12]">
