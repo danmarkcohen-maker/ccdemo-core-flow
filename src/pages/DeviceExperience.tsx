@@ -79,9 +79,8 @@ const DeviceExperience: React.FC = () => {
     }]);
   }, []);
 
-  // Trigger departing phase inside the overlay screen
-  const twoPlayerRef = React.useRef<{ triggerDepart: () => void } | null>(null);
-  const fourPlayerRef = React.useRef<{ triggerDepart: () => void } | null>(null);
+  const twoPlayerRef = useRef<TwoPlayerHandle>(null);
+  const fourPlayerRef = useRef<FourPlayerHandle>(null);
 
   const twoPlayerActive = overlay === "two-player";
   const fourPlayerActive = overlay === "four-player";
