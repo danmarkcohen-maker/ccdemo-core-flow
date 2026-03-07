@@ -6,6 +6,7 @@ import ChatInput from "@/components/craiture/ChatInput";
 
 interface ChatScreenProps {
   userName: string;
+  resumeMode?: boolean;
 }
 
 interface Message {
@@ -19,21 +20,33 @@ const scriptedResponses: Record<string, string> = {
   default: "Ribbit! That's a great question. Let me think about it... 🐸",
 };
 
-const ChatScreen: React.FC<ChatScreenProps> = ({ userName }) => {
-  const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
+const resumeHistory: Message[] = [
+  { sender: "Beth", message: "Do you think clouds have feelings?", isUser: true },
+  { sender: "Frog", message: "Ribbit! I think they feel light and fluffy… until they get angry and rain on everyone 🌧️🐸", isUser: false },
+  { sender: "Beth", message: "Haha that's kind of beautiful actually", isUser: true },
+  { sender: "Frog", message: "You're kind of beautiful actually ✨🐸", isUser: false },
+  { sender: "Beth", message: "Aww stop it 😊", isUser: true },
+  { sender: "Frog", message: "Never! Compliments are free and I have unlimited supply 🐸💚", isUser: false },
+];
+
+const ChatScreen: React.FC<ChatScreenProps> = ({ userName, resumeMode = false }) => {
+  const [visibleMessages, setVisibleMessages] = useState<Message[]>(
+    resumeMode ? resumeHistory : []
+  );
   const [showThinking, setShowThinking] = useState(false);
   const [speakingCreature, setSpeakingCreature] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [demoStarted, setDemoStarted] = useState(false);
+  const [demoStarted, setDemoStarted] = useState(resumeMode);
 
   useEffect(() => {
+    if (resumeMode) return;
     const t = setTimeout(() => setDemoStarted(true), 800);
     return () => clearTimeout(t);
-  }, []);
+  }, [resumeMode]);
 
   useEffect(() => {
-    if (!demoStarted) return;
+    if (!demoStarted || resumeMode) return;
     setSpeakingCreature(true);
     setShowThinking(true);
     const t = setTimeout(() => {
@@ -47,7 +60,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName }) => {
       setTimeout(() => setSpeakingCreature(false), 2000);
     }, 1500);
     return () => clearTimeout(t);
-  }, [demoStarted, userName]);
+  }, [demoStarted, userName, resumeMode]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;

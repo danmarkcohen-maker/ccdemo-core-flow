@@ -6,7 +6,7 @@ import TwoPlayerScreen from "@/components/craiture/screens/TwoPlayerScreen";
 import FourPlayerScreen from "@/components/craiture/screens/FourPlayerScreen";
 import { motion, AnimatePresence } from "framer-motion";
 
-type Screen = "onboarding" | "chat" | "two-player" | "four-player";
+type Screen = "onboarding" | "chat" | "resume" | "two-player" | "four-player";
 
 const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
 
@@ -22,6 +22,11 @@ const DeviceExperience: React.FC = () => {
 
   const handleRestart = () => {
     setScreen("onboarding");
+    setKey((k) => k + 1);
+  };
+
+  const handleResume = () => {
+    setScreen("resume");
     setKey((k) => k + 1);
   };
 
@@ -55,6 +60,9 @@ const DeviceExperience: React.FC = () => {
               {screen === "chat" && (
                 <ChatScreen userName={userName} />
               )}
+              {screen === "resume" && (
+                <ChatScreen userName={userName} resumeMode />
+              )}
               {screen === "two-player" && <TwoPlayerScreen />}
               {screen === "four-player" && <FourPlayerScreen />}
             </motion.div>
@@ -80,6 +88,17 @@ const DeviceExperience: React.FC = () => {
           }}
         >
           🔄 Restart Onboarding
+        </button>
+
+        <button
+          onClick={handleResume}
+          className="text-left px-4 py-3 rounded-xl text-[14px] font-medium text-muted-foreground/70 hover:text-foreground/80 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-200 active:scale-[0.97]"
+          style={{
+            background: "hsla(230, 14%, 15%, 0.6)",
+            ...fontStyle,
+          }}
+        >
+          💤 Resume (Wake)
         </button>
 
         <button
@@ -112,6 +131,7 @@ const DeviceExperience: React.FC = () => {
           <p className="text-[13px] text-muted-foreground/60 mt-0.5" style={fontStyle}>
             {screen === "onboarding" && "First Activation"}
             {screen === "chat" && `Chat · ${userName} + Frog`}
+            {screen === "resume" && `Resumed · ${userName} + Frog`}
             {screen === "two-player" && "2-Player Playdate"}
             {screen === "four-player" && "4-Player Playdate"}
           </p>
