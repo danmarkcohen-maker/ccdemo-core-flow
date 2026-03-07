@@ -35,13 +35,21 @@ const chatMessages: Message[] = [
 
 const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
 
-const FourPlayerScreen: React.FC<FourPlayerScreenProps> = ({ onExit }) => {
+export interface FourPlayerHandle {
+  triggerDepart: () => void;
+}
+
+const FourPlayerScreen = forwardRef<FourPlayerHandle, FourPlayerScreenProps>(({ onExit }, ref) => {
   const [phase, setPhase] = useState<Phase>("hi-five");
   const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
   const [showThinking, setShowThinking] = useState(false);
   const [speakingCreature, setSpeakingCreature] = useState<CreatureType | null>(null);
   const [scriptIndex, setScriptIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    triggerDepart: () => setPhase("departing"),
+  }));
 
   // Hi-Five flash → confirm
   useEffect(() => {
@@ -302,6 +310,8 @@ const FourPlayerScreen: React.FC<FourPlayerScreenProps> = ({ onExit }) => {
       </div>
     </>
   );
-};
+});
+
+FourPlayerScreen.displayName = "FourPlayerScreen";
 
 export default FourPlayerScreen;
