@@ -33,13 +33,21 @@ const chatMessages: Message[] = [
 
 const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
 
-const TwoPlayerScreen: React.FC<TwoPlayerScreenProps> = ({ onExit }) => {
+export interface TwoPlayerHandle {
+  triggerDepart: () => void;
+}
+
+const TwoPlayerScreen = forwardRef<TwoPlayerHandle, TwoPlayerScreenProps>(({ onExit }, ref) => {
   const [phase, setPhase] = useState<Phase>("hi-five");
   const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
   const [showThinking, setShowThinking] = useState(false);
   const [speakingCreature, setSpeakingCreature] = useState<CreatureType | null>(null);
   const [scriptIndex, setScriptIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    triggerDepart: () => setPhase("departing"),
+  }));
 
   // Hi-Five flash → confirm
   useEffect(() => {
@@ -324,6 +332,8 @@ const TwoPlayerScreen: React.FC<TwoPlayerScreenProps> = ({ onExit }) => {
       </div>
     </>
   );
-};
+});
+
+TwoPlayerScreen.displayName = "TwoPlayerScreen";
 
 export default TwoPlayerScreen;
