@@ -6,7 +6,7 @@ import TwoPlayerScreen from "@/components/craiture/screens/TwoPlayerScreen";
 import FourPlayerScreen from "@/components/craiture/screens/FourPlayerScreen";
 import { motion, AnimatePresence } from "framer-motion";
 
-type Screen = "onboarding" | "chat" | "two-player" | "four-player";
+type Screen = "onboarding" | "chat" | "resume" | "two-player" | "four-player";
 
 const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
 
