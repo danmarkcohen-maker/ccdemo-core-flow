@@ -16,21 +16,15 @@ interface ChatScreenProps {
   messages: ChatMessage[];
   onMessagesChange: (msgs: ChatMessage[]) => void;
   resumeMode?: boolean;
-  onSpeakingChange?: (speaking: boolean) => void;
 }
 
 const scriptedResponses: Record<string, string> = {
   default: "Ribbit! That's a great question. Let me think about it... 🐸",
 };
 
-const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false, onSpeakingChange }) => {
+const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false }) => {
   const [showThinking, setShowThinking] = useState(false);
-  const [speakingCreature, setSpeakingCreatureRaw] = useState(false);
-
-  const setSpeakingCreature = (val: boolean) => {
-    setSpeakingCreatureRaw(val);
-    onSpeakingChange?.(val);
-  };
+  const [speakingCreature, setSpeakingCreature] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [greeted, setGreeted] = useState(resumeMode || messages.length > 0);

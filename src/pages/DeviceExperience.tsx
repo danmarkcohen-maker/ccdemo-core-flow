@@ -81,7 +81,6 @@ const DeviceExperience: React.FC = () => {
 
   const twoPlayerRef = useRef<TwoPlayerHandle>(null);
   const fourPlayerRef = useRef<FourPlayerHandle>(null);
-  const [frogSpeaking, setFrogSpeaking] = useState(false);
 
   const twoPlayerActive = overlay === "two-player";
   const fourPlayerActive = overlay === "four-player";
@@ -90,7 +89,7 @@ const DeviceExperience: React.FC = () => {
     <div className="flex items-center justify-center min-h-screen gap-12" style={{ background: "hsl(220, 15%, 6%)" }}>
       {/* Device */}
       <div className="flex-shrink-0">
-        <DeviceFrame ledPulsing={frogSpeaking}>
+        <DeviceFrame>
           {/* Persistent chat layer - always mounted once onboarding is done */}
           {chatMounted && (
             <div className="absolute inset-0" style={{ visibility: overlay ? "hidden" : "visible" }}>
@@ -99,7 +98,6 @@ const DeviceExperience: React.FC = () => {
                 messages={chatMessages}
                 onMessagesChange={setChatMessages}
                 resumeMode={chatMessages.length > 0}
-                onSpeakingChange={setFrogSpeaking}
               />
             </div>
           )}
@@ -132,7 +130,7 @@ const DeviceExperience: React.FC = () => {
                 className="absolute inset-0"
                 style={{ background: "hsl(230, 18%, 4%)" }}
               >
-                <TwoPlayerScreen ref={twoPlayerRef} onExit={handleOverlayExit} onSpeakingChange={setFrogSpeaking} />
+                <TwoPlayerScreen ref={twoPlayerRef} onExit={handleOverlayExit} />
               </motion.div>
             )}
             {fourPlayerActive && (
@@ -145,7 +143,7 @@ const DeviceExperience: React.FC = () => {
                 className="absolute inset-0"
                 style={{ background: "hsl(230, 18%, 4%)" }}
               >
-                <FourPlayerScreen ref={fourPlayerRef} onExit={handleOverlayExit} onSpeakingChange={setFrogSpeaking} />
+                <FourPlayerScreen ref={fourPlayerRef} onExit={handleOverlayExit} />
               </motion.div>
             )}
           </AnimatePresence>

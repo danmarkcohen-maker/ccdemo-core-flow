@@ -21,7 +21,6 @@ type Phase = "hi-five" | "confirm" | "connecting" | "connected" | "chat" | "depa
 
 interface FourPlayerScreenProps {
   onExit: () => void;
-  onSpeakingChange?: (speaking: boolean) => void;
 }
 
 const chatMessages: Message[] = [
@@ -40,18 +39,11 @@ export interface FourPlayerHandle {
   triggerDepart: () => void;
 }
 
-const FourPlayerScreen = forwardRef<FourPlayerHandle, FourPlayerScreenProps>(({ onExit, onSpeakingChange }, ref) => {
+const FourPlayerScreen = forwardRef<FourPlayerHandle, FourPlayerScreenProps>(({ onExit }, ref) => {
   const [phase, setPhase] = useState<Phase>("hi-five");
   const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
   const [showThinking, setShowThinking] = useState(false);
-  const [speakingCreatureRaw, setSpeakingCreatureRaw] = useState<CreatureType | null>(null);
-
-  const setSpeakingCreature = (val: CreatureType | null) => {
-    setSpeakingCreatureRaw(val);
-    onSpeakingChange?.(val === "frog");
-  };
-
-  const speakingCreature = speakingCreatureRaw;
+  const [speakingCreature, setSpeakingCreature] = useState<CreatureType | null>(null);
   const [scriptIndex, setScriptIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 

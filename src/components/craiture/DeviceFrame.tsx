@@ -4,7 +4,6 @@ interface DeviceFrameProps {
   children: React.ReactNode;
   edgeGlow?: boolean;
   creatureColor?: string;
-  ledPulsing?: boolean;
 }
 
 const keyboardRows = [
@@ -13,7 +12,7 @@ const keyboardRows = [
   ["↑", "Z", "X", "C", "V", "B", "N", "M", ".", "↵"],
 ];
 
-const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureColor = "120, 35%, 30%", ledPulsing = false }) => {
+const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureColor = "120, 35%, 30%" }) => {
   // Device dimensions
   const W = 520;
   const eyeR = 44; // eye radius
@@ -179,18 +178,13 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ children, edgeGlow, creatureC
 
           {/* LED dots */}
           <div className="absolute top-[34px] left-1/2 -translate-x-1/2 flex gap-[6px] z-[12]">
-            {[0, 0.15, 0.07].map((delay, i) => (
+            {[0, 1, 2].map((i) => (
               <div
                 key={i}
                 className="w-[4px] h-[4px] rounded-full"
                 style={{
-                  background: ledPulsing ? "hsl(0, 0%, 95%)" : "hsl(0, 0%, 75%)",
-                  boxShadow: ledPulsing
-                    ? "0 0 6px hsla(0, 0%, 100%, 0.8), 0 0 12px hsla(0, 0%, 100%, 0.4)"
-                    : "0 0 4px hsla(0, 0%, 100%, 0.3)",
-                  animation: ledPulsing ? `led-speech 1.8s ease-in-out infinite` : "none",
-                  animationDelay: ledPulsing ? `${delay}s` : "0s",
-                  transition: "background 0.3s, box-shadow 0.3s",
+                  background: "hsl(0, 0%, 75%)",
+                  boxShadow: "0 0 4px hsla(0, 0%, 100%, 0.3)",
                 }}
               />
             ))}

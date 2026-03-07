@@ -19,7 +19,6 @@ type Phase = "hi-five" | "confirm" | "connecting" | "connected" | "chat" | "depa
 
 interface TwoPlayerScreenProps {
   onExit: () => void;
-  onSpeakingChange?: (speaking: boolean) => void;
 }
 
 const chatMessages: Message[] = [
@@ -38,18 +37,11 @@ export interface TwoPlayerHandle {
   triggerDepart: () => void;
 }
 
-const TwoPlayerScreen = forwardRef<TwoPlayerHandle, TwoPlayerScreenProps>(({ onExit, onSpeakingChange }, ref) => {
+const TwoPlayerScreen = forwardRef<TwoPlayerHandle, TwoPlayerScreenProps>(({ onExit }, ref) => {
   const [phase, setPhase] = useState<Phase>("hi-five");
   const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
   const [showThinking, setShowThinking] = useState(false);
-  const [speakingCreatureRaw, setSpeakingCreatureRaw] = useState<CreatureType | null>(null);
-
-  const setSpeakingCreature = (val: CreatureType | null) => {
-    setSpeakingCreatureRaw(val);
-    onSpeakingChange?.(val === "frog");
-  };
-
-  const speakingCreature = speakingCreatureRaw;
+  const [speakingCreature, setSpeakingCreature] = useState<CreatureType | null>(null);
   const [scriptIndex, setScriptIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
