@@ -4,9 +4,11 @@ interface FoxCreatureProps {
   opacity?: number;
   speaking?: boolean;
   className?: string;
+  size?: number;
 }
 
-const FoxCreature: React.FC<FoxCreatureProps> = ({ opacity = 0.15, speaking = false, className = "" }) => {
+const FoxCreature: React.FC<FoxCreatureProps> = ({ opacity = 0.15, speaking = false, className = "", size }) => {
+  const scale = size ? size / 360 : 1;
   return (
     <div
       className={`absolute pointer-events-none select-none ${className}`}
@@ -17,7 +19,7 @@ const FoxCreature: React.FC<FoxCreatureProps> = ({ opacity = 0.15, speaking = fa
         transition: "opacity 0.8s ease",
       }}
     >
-      <svg width="300" height="360" viewBox="0 0 300 360" fill="none">
+      <svg width={300 * scale} height={360 * scale} viewBox="0 0 300 360" fill="none">
         {/* Body */}
         <ellipse cx="150" cy="250" rx="85" ry="100" fill="hsl(20, 45%, 32%)" />
         {/* Head */}

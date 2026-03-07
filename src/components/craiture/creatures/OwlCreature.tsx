@@ -4,9 +4,11 @@ interface OwlCreatureProps {
   opacity?: number;
   speaking?: boolean;
   className?: string;
+  size?: number;
 }
 
-const OwlCreature: React.FC<OwlCreatureProps> = ({ opacity = 0.15, speaking = false, className = "" }) => {
+const OwlCreature: React.FC<OwlCreatureProps> = ({ opacity = 0.15, speaking = false, className = "", size }) => {
+  const scale = size ? size / 360 : 1;
   return (
     <div
       className={`absolute pointer-events-none select-none ${className}`}
@@ -17,7 +19,7 @@ const OwlCreature: React.FC<OwlCreatureProps> = ({ opacity = 0.15, speaking = fa
         transition: "opacity 0.8s ease",
       }}
     >
-      <svg width="300" height="360" viewBox="0 0 300 360" fill="none">
+      <svg width={300 * scale} height={360 * scale} viewBox="0 0 300 360" fill="none">
         {/* Body */}
         <ellipse cx="150" cy="240" rx="90" ry="110" fill="hsl(35, 35%, 30%)" />
         {/* Chest */}

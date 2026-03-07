@@ -110,10 +110,10 @@ const FourPlayerScreen: React.FC = () => {
 
   return (
     <>
-      <FrogCreature opacity={phase === "chat" ? 0.14 : 0} size={240} speaking={speakingCreature === "frog"} className="top-[3%] left-[2%] transition-opacity duration-[1500ms]" />
-      <OwlCreature opacity={phase === "chat" ? 0.14 : 0} speaking={speakingCreature === "owl"} className="top-[3%] right-[2%] transition-opacity duration-[1500ms]" />
-      <RobotCreature opacity={phase === "chat" ? 0.14 : 0} speaking={speakingCreature === "robot"} className="bottom-[12%] left-[2%] transition-opacity duration-[1500ms]" />
-      <FoxCreature opacity={phase === "chat" ? 0.14 : 0} speaking={speakingCreature === "fox"} className="bottom-[12%] right-[2%] transition-opacity duration-[1500ms]" />
+      <FrogCreature opacity={phase === "chat" ? 0.14 : 0} size={160} speaking={speakingCreature === "frog"} className="top-[2%] left-[2%] transition-opacity duration-[1500ms]" />
+      <OwlCreature opacity={phase === "chat" ? 0.14 : 0} size={160} speaking={speakingCreature === "owl"} className="top-[2%] right-[2%] transition-opacity duration-[1500ms]" />
+      <RobotCreature opacity={phase === "chat" ? 0.14 : 0} size={160} speaking={speakingCreature === "robot"} className="bottom-[12%] left-[2%] transition-opacity duration-[1500ms]" />
+      <FoxCreature opacity={phase === "chat" ? 0.14 : 0} size={160} speaking={speakingCreature === "fox"} className="bottom-[12%] right-[2%] transition-opacity duration-[1500ms]" />
 
       <div className="relative z-10 flex flex-col h-full">
         <AnimatePresence mode="wait">
