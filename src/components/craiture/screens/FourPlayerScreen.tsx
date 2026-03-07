@@ -17,65 +17,44 @@ interface Message {
   streaming?: boolean;
 }
 
-type Phase = "scanning" | "detected-1" | "detected-2" | "detected-3" | "pairing" | "connected" | "chat" | "departing" | "ended";
+type Phase = "hi-five" | "confirm" | "connected" | "chat" | "departing";
+
+interface FourPlayerScreenProps {
+  onExit: () => void;
+}
 
 const chatMessages: Message[] = [
   { sender: "Beth", message: "Whoa, four of us! This is awesome!", isUser: true, creatureType: "frog" },
   { sender: "Frog", message: "A proper party! Ribbit! 🎉🐸", isUser: false, creatureType: "frog", streaming: true },
-  { sender: "Sam", message: "Robot, what should we talk about?", isUser: true, creatureType: "robot" },
+  { sender: "Juliet", message: "Robot, what should we talk about?", isUser: true, creatureType: "robot" },
   { sender: "Robot", message: "I suggest: the deepest part of the ocean. Only 3 humans have ever been there.", isUser: false, creatureType: "robot", streaming: true },
   { sender: "Chloe", message: "Ooh spooky! What lives down there?", isUser: true, creatureType: "owl" },
   { sender: "Owl", message: "Creatures that make their own light — bioluminescence. Remarkable adaptation.", isUser: false, creatureType: "owl", streaming: true },
   { sender: "Fox", message: "I bet there are fish down there that have never seen sunlight! How wild is that? 🦊✨", isUser: false, creatureType: "fox", streaming: true },
 ];
 
-const arrivals = [
-  { emoji: "🦉", name: "Chloe's Owl" },
-  { emoji: "🤖", name: "Sam's Robot" },
-  { emoji: "🦊", name: "Mia's Fox" },
-];
-
 const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
 
-const PulseRing: React.FC<{ color: string; delay?: number }> = ({ color, delay = 0 }) => (
-  <motion.div
-    className="absolute rounded-full border-2"
-    style={{ borderColor: color }}
-    initial={{ width: 40, height: 40, opacity: 0.8 }}
-    animate={{ width: 160, height: 160, opacity: 0 }}
-    transition={{ duration: 2, repeat: Infinity, delay, ease: "easeOut" }}
-  />
-);
-
-const FourPlayerScreen: React.FC = () => {
-  const [phase, setPhase] = useState<Phase>("scanning");
+const FourPlayerScreen: React.FC<FourPlayerScreenProps> = ({ onExit }) => {
+  const [phase, setPhase] = useState<Phase>("hi-five");
   const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
   const [showThinking, setShowThinking] = useState(false);
   const [speakingCreature, setSpeakingCreature] = useState<CreatureType | null>(null);
   const [scriptIndex, setScriptIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Phase progression
+  // Hi-Five flow
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
-    timers.push(setTimeout(() => setPhase("detected-1"), 2200));
-    timers.push(setTimeout(() => setPhase("detected-2"), 4200));
-    timers.push(setTimeout(() => setPhase("detected-3"), 6200));
-    timers.push(setTimeout(() => setPhase("pairing"), 8200));
-    timers.push(setTimeout(() => setPhase("connected"), 10200));
-    timers.push(setTimeout(() => setPhase("chat"), 12000));
+    timers.push(setTimeout(() => setPhase("confirm"), 1000));
+    timers.push(setTimeout(() => setPhase("connected"), 2800));
+    timers.push(setTimeout(() => setPhase("chat"), 4500));
     return () => timers.forEach(clearTimeout);
   }, []);
 
   // Chat playback
   useEffect(() => {
-    if (phase !== "chat" || scriptIndex >= chatMessages.length) {
-      if (phase === "chat" && scriptIndex >= chatMessages.length) {
-        const t = setTimeout(() => setPhase("departing"), 3000);
-        return () => clearTimeout(t);
-      }
-      return;
-    }
+    if (phase !== "chat" || scriptIndex >= chatMessages.length) return;
     const msg = chatMessages[scriptIndex];
     const delay = scriptIndex === 0 ? 600 : 2400;
 
@@ -94,19 +73,18 @@ const FourPlayerScreen: React.FC = () => {
     }
   }, [phase, scriptIndex]);
 
-  // Departing → ended
+  // Departing → exit
   useEffect(() => {
     if (phase !== "departing") return;
-    const t = setTimeout(() => setPhase("ended"), 4000);
+    const t = setTimeout(() => onExit(), 3500);
     return () => clearTimeout(t);
-  }, [phase]);
+  }, [phase, onExit]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [visibleMessages, showThinking]);
 
-  const isPreChat = ["scanning", "detected-1", "detected-2", "detected-3", "pairing", "connected"].includes(phase);
-  const detectedCount = phase === "detected-1" ? 1 : phase === "detected-2" ? 2 : phase === "detected-3" ? 3 : 0;
+  const isPreChat = ["hi-five", "confirm", "connected"].includes(phase);
 
   return (
     <>
@@ -117,91 +95,103 @@ const FourPlayerScreen: React.FC = () => {
 
       <div className="relative z-10 flex flex-col h-full">
         <AnimatePresence mode="wait">
-          {/* Discovery phases */}
-          {phase === "scanning" && (
-            <motion.div key="scan" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }} className="flex-1 flex flex-col items-center justify-center px-6">
-              <div className="relative flex items-center justify-center" style={{ width: 160, height: 160 }}>
-                <PulseRing color="hsla(120, 40%, 50%, 0.4)" delay={0} />
-                <PulseRing color="hsla(120, 40%, 50%, 0.3)" delay={0.7} />
-                <PulseRing color="hsla(120, 40%, 50%, 0.2)" delay={1.4} />
-                <motion.div className="w-10 h-10 rounded-full" style={{ background: "hsla(120, 40%, 50%, 0.6)", boxShadow: "0 0 30px hsla(120, 40%, 50%, 0.3)" }} animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }} />
-              </div>
-              <p className="text-[16px] text-muted-foreground/60 mt-6" style={fontStyle}>Looking for nearby Craitures…</p>
-            </motion.div>
-          )}
-
-          {/* Sequential detection of 3 creatures */}
-          {(phase === "detected-1" || phase === "detected-2" || phase === "detected-3") && (
-            <motion.div key="detecting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
-              <div className="flex gap-4">
-                {arrivals.slice(0, detectedCount).map((a, i) => (
+          {isPreChat && (
+            <motion.div
+              key="pre-chat"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="flex-1 flex flex-col items-center justify-center px-6"
+            >
+              {/* Hi-Five flash */}
+              {phase === "hi-five" && (
+                <motion.div
+                  className="flex flex-col items-center gap-4"
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                >
                   <motion.div
-                    key={i}
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 200, damping: 14 }}
-                    className="w-16 h-16 rounded-full flex items-center justify-center text-[28px]"
-                    style={{ background: "hsla(120, 40%, 50%, 0.12)", border: "2px solid hsla(120, 40%, 50%, 0.25)" }}
+                    className="w-24 h-24 rounded-full flex items-center justify-center"
+                    style={{ background: "hsla(45, 80%, 55%, 0.2)", border: "3px solid hsla(45, 80%, 55%, 0.5)" }}
+                    animate={{ scale: [1, 1.15, 1] }}
+                    transition={{ duration: 0.4, repeat: 2 }}
                   >
-                    {a.emoji}
+                    <span className="text-[48px]">🙌</span>
                   </motion.div>
-                ))}
-              </div>
-              <div className="text-center">
-                <p className="text-[17px] font-semibold text-foreground/90" style={fontStyle}>
-                  {detectedCount} Craiture{detectedCount > 1 ? "s" : ""} detected!
-                </p>
-                <p className="text-[13px] text-muted-foreground/50 mt-1" style={fontStyle}>
-                  {arrivals.slice(0, detectedCount).map((a) => a.name).join(", ")}
-                </p>
-              </div>
-              {detectedCount < 3 && (
-                <motion.p className="text-[12px] text-muted-foreground/30" style={fontStyle} animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                  Still scanning…
-                </motion.p>
+                  <p className="text-[22px] font-bold text-foreground/90" style={fontStyle}>
+                    Hi-Five!
+                  </p>
+                </motion.div>
               )}
-            </motion.div>
-          )}
 
-          {/* Pairing */}
-          {phase === "pairing" && (
-            <motion.div key="pairing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
-              <div className="flex items-center gap-3">
-                {["🐸", "🦉", "🤖", "🦊"].map((e, i) => (
-                  <motion.span key={i} className="text-[32px]" animate={{ y: [0, -8, 0] }} transition={{ duration: 0.8, delay: i * 0.15, repeat: Infinity }}>
-                    {e}
-                  </motion.span>
-                ))}
-              </div>
-              <p className="text-[16px] text-muted-foreground/60" style={fontStyle}>Syncing all Craitures…</p>
-            </motion.div>
-          )}
+              {/* Confirmation */}
+              {phase === "confirm" && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col items-center gap-5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-[30px]">🐸</span>
+                    <span className="text-[16px] text-muted-foreground/30">×</span>
+                    <span className="text-[30px]">🦉</span>
+                    <span className="text-[16px] text-muted-foreground/30">×</span>
+                    <span className="text-[30px]">🤖</span>
+                    <span className="text-[16px] text-muted-foreground/30">×</span>
+                    <span className="text-[30px]">🦊</span>
+                  </div>
+                  <p className="text-[16px] font-semibold text-foreground/85 text-center leading-relaxed" style={fontStyle}>
+                    Hi-Five with Chloe's Owl,<br />Juliet's Robot & Cara's Fox?
+                  </p>
+                  <motion.div
+                    className="px-8 py-3 rounded-full text-[16px] font-semibold text-foreground/90"
+                    style={{
+                      background: "hsla(120, 40%, 40%, 0.3)",
+                      border: "2px solid hsla(120, 40%, 50%, 0.4)",
+                      ...fontStyle,
+                    }}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    Yes! ✨
+                  </motion.div>
+                </motion.div>
+              )}
 
-          {/* Connected */}
-          {phase === "connected" && (
-            <motion.div key="connected" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col items-center justify-center px-6 gap-5">
-              <motion.div
-                className="w-20 h-20 rounded-full flex items-center justify-center"
-                style={{ background: "hsla(120, 50%, 40%, 0.2)", border: "2px solid hsla(120, 40%, 50%, 0.4)" }}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 200, damping: 12 }}
-              >
-                <span className="text-[32px]">✨</span>
-              </motion.div>
-              <div className="text-center">
-                <p className="text-[18px] font-semibold text-foreground/90" style={fontStyle}>Playdate started!</p>
-                <p className="text-[12px] text-muted-foreground/40 mt-2 leading-relaxed" style={fontStyle}>
-                  Beth 🐸 · Chloe 🦉 · Sam 🤖 · Mia 🦊
-                </p>
-              </div>
+              {/* Connected */}
+              {phase === "connected" && (
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="flex flex-col items-center gap-5"
+                >
+                  <motion.div
+                    className="w-20 h-20 rounded-full flex items-center justify-center"
+                    style={{ background: "hsla(120, 50%, 40%, 0.2)", border: "2px solid hsla(120, 40%, 50%, 0.4)" }}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 12 }}
+                  >
+                    <span className="text-[32px]">✨</span>
+                  </motion.div>
+                  <div className="text-center">
+                    <p className="text-[18px] font-semibold text-foreground/90" style={fontStyle}>Hi-Five! Playdate started!</p>
+                    <p className="text-[12px] text-muted-foreground/40 mt-2 leading-relaxed" style={fontStyle}>
+                      Beth 🐸 · Chloe 🦉 · Juliet 🤖 · Cara 🦊
+                    </p>
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           )}
 
           {/* Chat */}
           {phase === "chat" && (
-            <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }} className="flex-1 flex flex-col h-full">
-              <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4" style={{ scrollBehavior: "smooth" }}>
+            <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }} className="flex-1 flex flex-col h-full min-h-0">
+              <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-4" style={{ scrollBehavior: "smooth" }}>
                 {visibleMessages.map((msg, i) => (
                   <ChatBubble key={i} sender={msg.sender} message={msg.message} isUser={msg.isUser} creatureType={msg.creatureType} streaming={msg.streaming} />
                 ))}
@@ -219,18 +209,14 @@ const FourPlayerScreen: React.FC = () => {
                   <motion.span
                     key={i}
                     className="text-[32px]"
-                    animate={{
-                      x: (i < 2 ? -1 : 1) * 50,
-                      y: (i % 2 === 0 ? -1 : 1) * 30,
-                      opacity: 0,
-                    }}
+                    animate={{ x: (i < 2 ? -1 : 1) * 50, y: (i % 2 === 0 ? -1 : 1) * 30, opacity: 0 }}
                     transition={{ duration: 3, ease: "easeIn", delay: i * 0.2 }}
                   >
                     {e}
                   </motion.span>
                 ))}
               </div>
-              <p className="text-[16px] text-muted-foreground/60" style={fontStyle}>Friends moving away…</p>
+              <p className="text-[16px] text-muted-foreground/60" style={fontStyle}>Friends waved goodbye…</p>
               <motion.p
                 className="text-[13px] text-muted-foreground/30"
                 style={fontStyle}
@@ -240,15 +226,6 @@ const FourPlayerScreen: React.FC = () => {
               >
                 Playdate chat deleted
               </motion.p>
-            </motion.div>
-          )}
-
-          {/* Ended */}
-          {phase === "ended" && (
-            <motion.div key="ended" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="flex-1 flex flex-col items-center justify-center px-6 gap-4">
-              <FrogCreature opacity={0.25} size={300} speaking={false} className="top-[10%] left-1/2 -translate-x-1/2" />
-              <p className="text-[16px] text-muted-foreground/60 relative z-10" style={fontStyle}>Just you and Frog again 🐸</p>
-              <p className="text-[12px] text-muted-foreground/30 relative z-10" style={fontStyle}>All playdate messages were erased</p>
             </motion.div>
           )}
         </AnimatePresence>
