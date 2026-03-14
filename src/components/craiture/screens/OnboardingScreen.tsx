@@ -43,14 +43,13 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
   };
 
   const handleTopicSelect = (topic: string) => {
-    setSelectedTopics((prev) => {
-      const next = prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic];
-      if (next.length >= 1 && !prev.includes(topic)) {
-        // After selecting a topic, transition to chat after a moment
-        setTimeout(() => onComplete(submittedName), 1500);
-      }
-      return next;
-    });
+    setSelectedTopics((prev) =>
+      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
+    );
+  };
+
+  const handleTopicsDone = () => {
+    onComplete(submittedName, selectedTopics.length > 0 ? selectedTopics : undefined);
   };
 
   return (

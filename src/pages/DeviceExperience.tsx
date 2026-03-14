@@ -41,12 +41,16 @@ const DeviceExperience: React.FC = () => {
   const [chatMounted, setChatMounted] = useState(false);
   const config = useConfigPanel();
 
-  const handleOnboardingComplete = useCallback((name: string) => {
+  const handleOnboardingComplete = useCallback((name: string, topics?: string[]) => {
     setUserName(name);
+    if (topics && topics.length > 0) {
+      // Seed selected topics into memories as initial interests
+      config.seedTopics(topics);
+    }
     setChatMessages([]);
     setScreen("chat");
     setChatMounted(true);
-  }, []);
+  }, [config]);
 
   const handleRestart = () => {
     setOverlay(null);
