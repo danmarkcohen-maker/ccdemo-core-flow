@@ -292,6 +292,7 @@ export function useConfigPanel() {
     memories,
     extractMemories,
     clearMemories,
+    seedTopics,
     isExtracting,
     DEFAULT_SYSTEM_PROMPT,
     DEFAULT_RULES,
