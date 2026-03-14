@@ -4,7 +4,7 @@ import Fireflies from "@/components/craiture/Fireflies";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface OnboardingScreenProps {
-  onComplete: (name: string) => void;
+  onComplete: (name: string, topics?: string[]) => void;
 }
 
 const topicColors = [
