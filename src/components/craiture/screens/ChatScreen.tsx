@@ -19,6 +19,8 @@ interface ChatScreenProps {
   messages: ChatMessage[];
   onMessagesChange: (msgs: ChatMessage[]) => void;
   resumeMode?: boolean;
+  systemPrompt?: string;
+  onUsage?: (userMsgLength: number, assistantMsgLength: number, usage?: import("@/lib/streamFrogChat").UsageData) => void;
 }
 
 const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false }) => {
