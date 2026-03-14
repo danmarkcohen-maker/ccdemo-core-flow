@@ -237,6 +237,16 @@ export function useConfigPanel() {
     setMemories(EMPTY_MEMORIES);
   }, []);
 
+  const seedTopics = useCallback((topics: string[]) => {
+    setMemories((prev) => {
+      const existing = new Set(prev.likes.map(s => s.toLowerCase().trim()));
+      const newLikes = topics
+        .map(t => t.toLowerCase().trim())
+        .filter(t => t && !existing.has(t));
+      return { ...prev, likes: [...prev.likes, ...newLikes] };
+    });
+  }, []);
+
   const recordUsage = useCallback((userMsgLength: number, assistantMsgLength: number, usage?: UsageData) => {
     const stat: MessageStat = {
       timestamp: Date.now(),
@@ -282,6 +292,7 @@ export function useConfigPanel() {
     memories,
     extractMemories,
     clearMemories,
+    seedTopics,
     isExtracting,
     DEFAULT_SYSTEM_PROMPT,
     DEFAULT_RULES,
