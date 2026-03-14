@@ -101,8 +101,9 @@ const DeviceExperience: React.FC = () => {
                 messages={chatMessages}
                 onMessagesChange={setChatMessages}
                 resumeMode={chatMessages.length > 0}
-                systemPrompt={config.combinedPrompt}
+                systemPrompt={config.buildCombinedPrompt(userName)}
                 onUsage={config.recordUsage}
+                onResponseComplete={(msgs) => config.extractMemories(msgs, userName)}
               />
             </div>
           )}
