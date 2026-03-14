@@ -86,7 +86,7 @@ const DeviceExperience: React.FC = () => {
   const fourPlayerActive = overlay === "four-player";
 
   return (
-    <div className="flex items-center justify-center min-h-screen gap-12" style={{ background: "hsl(220, 15%, 6%)" }}>
+    <div className="flex items-center justify-center min-h-screen gap-12 overflow-hidden" style={{ background: "hsl(220, 15%, 6%)" }}>
       {/* Device */}
       <div className="flex-shrink-0">
         <DeviceFrame>
