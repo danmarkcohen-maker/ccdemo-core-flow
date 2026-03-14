@@ -57,6 +57,19 @@ const DeviceExperience: React.FC = () => {
     setKey((k) => k + 1);
   };
 
+  const handleHardReset = () => {
+    // Clear all on-device data: memories, name, chat, stats
+    config.clearMemories();
+    config.resetAllTimeStats();
+    setUserName("Beth");
+    setOverlay(null);
+    setSleeping(false);
+    setScreen("onboarding");
+    setChatMounted(false);
+    setChatMessages([]);
+    setKey((k) => k + 1);
+  };
+
   const handleSleepWake = () => {
     setSleeping((s) => !s);
   };
