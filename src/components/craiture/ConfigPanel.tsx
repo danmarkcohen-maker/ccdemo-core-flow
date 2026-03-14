@@ -327,7 +327,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
       {/* Footer */}
       <div className="px-4 py-2 border-t border-border/20">
         <p className="text-[9px] text-muted-foreground/30 text-center">
-          Ctrl+Shift+D to toggle · Changes apply on next message
+          Ctrl+Shift+X to toggle · Changes apply on next message
         </p>
       </div>
     </div>
