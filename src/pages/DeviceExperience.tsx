@@ -7,6 +7,8 @@ import TwoPlayerScreen from "@/components/craiture/screens/TwoPlayerScreen";
 import type { TwoPlayerHandle } from "@/components/craiture/screens/TwoPlayerScreen";
 import FourPlayerScreen from "@/components/craiture/screens/FourPlayerScreen";
 import type { FourPlayerHandle } from "@/components/craiture/screens/FourPlayerScreen";
+import ConfigPanel from "@/components/craiture/ConfigPanel";
+import { useConfigPanel } from "@/hooks/useConfigPanel";
 import { motion, AnimatePresence } from "framer-motion";
 
 type Screen = "onboarding" | "chat";
@@ -37,6 +39,7 @@ const DeviceExperience: React.FC = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(resumeHistory);
   const [key, setKey] = useState(0);
   const [chatMounted, setChatMounted] = useState(false);
+  const config = useConfigPanel();
 
   const handleOnboardingComplete = useCallback((name: string) => {
     setUserName(name);
@@ -98,6 +101,8 @@ const DeviceExperience: React.FC = () => {
                 messages={chatMessages}
                 onMessagesChange={setChatMessages}
                 resumeMode={chatMessages.length > 0}
+                systemPrompt={config.combinedPrompt}
+                onUsage={config.recordUsage}
               />
             </div>
           )}
@@ -208,6 +213,22 @@ const DeviceExperience: React.FC = () => {
           {fourPlayerActive ? "👋 Exit Chat" : "🙌 Hi-Five 3 Friends"}
         </button>
       </div>
+
+      {/* Config Panel */}
+      <ConfigPanel
+        isOpen={config.isOpen}
+        onClose={() => config.setIsOpen(false)}
+        systemPrompt={config.systemPrompt}
+        onSystemPromptChange={config.setSystemPrompt}
+        rules={config.rules}
+        onRulesChange={config.setRules}
+        defaultPrompt={config.DEFAULT_SYSTEM_PROMPT}
+        defaultRules={config.DEFAULT_RULES}
+        chatMessages={chatMessages}
+        sessionStats={config.sessionStats}
+        allTimeStats={config.allTimeStats}
+        onResetAllTime={config.resetAllTimeStats}
+      />
     </div>
   );
 };

@@ -19,9 +19,11 @@ interface ChatScreenProps {
   messages: ChatMessage[];
   onMessagesChange: (msgs: ChatMessage[]) => void;
   resumeMode?: boolean;
+  systemPrompt?: string;
+  onUsage?: (userMsgLength: number, assistantMsgLength: number, usage?: import("@/lib/streamFrogChat").UsageData) => void;
 }
 
-const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false }) => {
+const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false, systemPrompt, onUsage }) => {
   const [showThinking, setShowThinking] = useState(false);
   const [speakingCreature, setSpeakingCreature] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -78,9 +80,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
 
     assistantBufferRef.current = "";
     let firstDelta = true;
+    let usageData: import("@/lib/streamFrogChat").UsageData | undefined;
 
     await streamFrogChat({
       messages: apiMessages,
+      systemPrompt,
+      onUsage: (u) => { usageData = u; },
       onDelta: (chunk) => {
         if (firstDelta) {
           firstDelta = false;
@@ -109,6 +114,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
             ...updatedMessages,
             { sender: "Frog", message: assistantBufferRef.current, isUser: false },
           ]);
+          onUsage?.(userText.length, assistantBufferRef.current.length, usageData);
         }
       },
       onError: (error) => {

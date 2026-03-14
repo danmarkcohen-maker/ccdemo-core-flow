@@ -1,17 +1,27 @@
 type Msg = { role: "user" | "assistant"; content: string };
 
+export interface UsageData {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/frog-chat`;
 
 export async function streamFrogChat({
   messages,
+  systemPrompt,
   onDelta,
   onDone,
   onError,
+  onUsage,
 }: {
   messages: Msg[];
+  systemPrompt?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError?: (error: string) => void;
+  onUsage?: (usage: UsageData) => void;
 }) {
   const resp = await fetch(CHAT_URL, {
     method: "POST",
@@ -19,7 +29,10 @@ export async function streamFrogChat({
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ messages: messages.slice(-10) }),
+    body: JSON.stringify({
+      messages: messages.slice(-10),
+      ...(systemPrompt ? { systemPrompt } : {}),
+    }),
   });
 
   if (!resp.ok) {
@@ -44,6 +57,32 @@ export async function streamFrogChat({
   let buffer = "";
   let streamDone = false;
 
+  const processLine = (line: string) => {
+    if (line.endsWith("\r")) line = line.slice(0, -1);
+    if (line.startsWith(":") || line.trim() === "") return false;
+    if (!line.startsWith("data: ")) return false;
+
+    const jsonStr = line.slice(6).trim();
+    if (jsonStr === "[DONE]") return true;
+
+    try {
+      const parsed = JSON.parse(jsonStr);
+      // Check for usage in final chunk
+      if (parsed.usage && onUsage) {
+        onUsage({
+          prompt_tokens: parsed.usage.prompt_tokens || 0,
+          completion_tokens: parsed.usage.completion_tokens || 0,
+          total_tokens: parsed.usage.total_tokens || 0,
+        });
+      }
+      const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+      if (content) onDelta(content);
+    } catch {
+      return "retry" as const;
+    }
+    return false;
+  };
+
   while (!streamDone) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -51,24 +90,15 @@ export async function streamFrogChat({
 
     let newlineIndex: number;
     while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
-      let line = buffer.slice(0, newlineIndex);
+      const line = buffer.slice(0, newlineIndex);
       buffer = buffer.slice(newlineIndex + 1);
 
-      if (line.endsWith("\r")) line = line.slice(0, -1);
-      if (line.startsWith(":") || line.trim() === "") continue;
-      if (!line.startsWith("data: ")) continue;
-
-      const jsonStr = line.slice(6).trim();
-      if (jsonStr === "[DONE]") {
+      const result = processLine(line);
+      if (result === true) {
         streamDone = true;
         break;
       }
-
-      try {
-        const parsed = JSON.parse(jsonStr);
-        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-        if (content) onDelta(content);
-      } catch {
+      if (result === "retry") {
         buffer = line + "\n" + buffer;
         break;
       }
@@ -77,18 +107,9 @@ export async function streamFrogChat({
 
   // Flush remaining
   if (buffer.trim()) {
-    for (let raw of buffer.split("\n")) {
+    for (const raw of buffer.split("\n")) {
       if (!raw) continue;
-      if (raw.endsWith("\r")) raw = raw.slice(0, -1);
-      if (raw.startsWith(":") || raw.trim() === "") continue;
-      if (!raw.startsWith("data: ")) continue;
-      const jsonStr = raw.slice(6).trim();
-      if (jsonStr === "[DONE]") continue;
-      try {
-        const parsed = JSON.parse(jsonStr);
-        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-        if (content) onDelta(content);
-      } catch {}
+      processLine(raw);
     }
   }
 
