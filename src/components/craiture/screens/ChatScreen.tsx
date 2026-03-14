@@ -78,10 +78,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
   };
 
   return (
-    <div className="relative h-full overflow-hidden">
+    <div className="relative h-full overflow-hidden" style={{ contain: "strict" }}>
       <FrogCreature
         opacity={0.25}
-        size={400}
+        size={360}
         speaking={speakingCreature}
         className="top-[10%] left-1/2 -translate-x-1/2"
       />
