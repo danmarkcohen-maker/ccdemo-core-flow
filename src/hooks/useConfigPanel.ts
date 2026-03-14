@@ -78,7 +78,7 @@ export function useConfigPanel() {
   // Keyboard shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === "D") {
+      if (e.ctrlKey && e.shiftKey && (e.key === "X" || e.key === "x")) {
         e.preventDefault();
         setIsOpen((o) => !o);
       }
