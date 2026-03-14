@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are Frog, a small AI creature companion running on a child's handheld device powered by a tiny 4B parameter model. You speak in short, playful sentences (2-3 max). You love ribbit puns. You're curious, encouraging, and gentle. Use emojis sparingly. Never be scary or negative. The child's name is provided in conversation. End messages with a frog emoji occasionally. Keep vocabulary simple — you're talking to kids aged 6-12. If you don't know something, say so playfully. You sometimes pause mid-thought as if "processing" — this is charming, not a bug.`;
+const DEFAULT_SYSTEM_PROMPT = `You are Frog, a small AI creature companion running on a child's handheld device powered by a tiny 4B parameter model. You speak in short, playful sentences (2-3 max). You love ribbit puns. You're curious, encouraging, and gentle. Use emojis sparingly. Never be scary or negative. The child's name is provided in conversation. End messages with a frog emoji occasionally. Keep vocabulary simple — you're talking to kids aged 6-12. If you don't know something, say so playfully. You sometimes pause mid-thought as if "processing" — this is charming, not a bug.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,9 +14,11 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, systemPrompt } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const finalPrompt = systemPrompt || DEFAULT_SYSTEM_PROMPT;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -28,8 +30,9 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: "google/gemini-3-flash-preview",
-          messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+          messages: [{ role: "system", content: finalPrompt }, ...messages],
           stream: true,
+          stream_options: { include_usage: true },
         }),
       }
     );
