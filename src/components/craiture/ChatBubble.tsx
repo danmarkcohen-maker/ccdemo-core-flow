@@ -8,6 +8,7 @@ interface ChatBubbleProps {
   isUser: boolean;
   creatureType?: CreatureType;
   streaming?: boolean;
+  liveStream?: boolean;
   delay?: number;
 }
 
@@ -32,11 +33,12 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
   isUser,
   creatureType = "frog",
   streaming = false,
+  liveStream = false,
   delay = 0,
 }) => {
-  const [displayedText, setDisplayedText] = useState(streaming ? "" : message);
+  const [displayedText, setDisplayedText] = useState(streaming && !liveStream ? "" : message);
   const [visible, setVisible] = useState(delay === 0);
-  const [streamDone, setStreamDone] = useState(!streaming);
+  const [streamDone, setStreamDone] = useState(!streaming && !liveStream);
 
   useEffect(() => {
     if (delay > 0) {
@@ -45,8 +47,9 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
     }
   }, [delay]);
 
+  // Character-by-character animation for pre-known strings
   useEffect(() => {
-    if (!visible || !streaming) return;
+    if (!visible || !streaming || liveStream) return;
     let i = 0;
     const interval = setInterval(() => {
       i++;
@@ -57,11 +60,13 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
       }
     }, 22);
     return () => clearInterval(interval);
-  }, [visible, streaming, message]);
+  }, [visible, streaming, liveStream, message]);
 
   if (!visible) return null;
 
   const bgColor = isUser ? bubbleColors.user : bubbleColors[creatureType] || bubbleColors.frog;
+  const showCursor = liveStream || (streaming && !streamDone);
+  const text = liveStream ? message : (streaming ? displayedText : message);
 
   return (
     <div
@@ -86,8 +91,8 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
               : "0 2px 16px hsla(0, 0%, 0%, 0.25)",
           }}
         >
-          {streaming ? displayedText : message}
-          {streaming && !streamDone && (
+          {text}
+          {showCursor && (
             <span className="inline-block w-[2px] h-[18px] bg-foreground/40 ml-0.5 animate-pulse" />
           )}
         </div>
