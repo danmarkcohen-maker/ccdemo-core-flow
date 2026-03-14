@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import type { ChatMessage } from "@/components/craiture/screens/ChatScreen";
-import type { SessionStats, AllTimeStats } from "@/hooks/useConfigPanel";
-import { X } from "lucide-react";
+import type { SessionStats, AllTimeStats, ExtractedMemories } from "@/hooks/useConfigPanel";
+import { X, RefreshCw } from "lucide-react";
 
 const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
 
@@ -20,47 +20,30 @@ interface ConfigPanelProps {
   sessionStats: SessionStats;
   allTimeStats: AllTimeStats;
   onResetAllTime: () => void;
-}
-
-// Memory extraction patterns
-const MEMORY_PATTERNS: { label: string; patterns: RegExp[] }[] = [
-  { label: "Name", patterns: [/my name is (\w+)/i, /i'm (\w+)/i, /call me (\w+)/i] },
-  { label: "Age", patterns: [/i'm (\d+) years old/i, /i am (\d+)/i, /i'm (\d+)/i] },
-  { label: "Likes", patterns: [/i like (.+?)(?:\.|!|$)/i, /i love (.+?)(?:\.|!|$)/i, /i enjoy (.+?)(?:\.|!|$)/i] },
-  { label: "Favorite", patterns: [/my fav(?:ou?rite)? (.+?) is (.+?)(?:\.|!|$)/i, /my fav(?:ou?rite)? is (.+?)(?:\.|!|$)/i] },
-  { label: "Dislikes", patterns: [/i (?:don't|dont|hate) like (.+?)(?:\.|!|$)/i, /i hate (.+?)(?:\.|!|$)/i] },
-  { label: "Wants", patterns: [/i want to (.+?)(?:\.|!|$)/i, /i wish (.+?)(?:\.|!|$)/i] },
-  { label: "Feels", patterns: [/i feel (.+?)(?:\.|!|$)/i, /i'm feeling (.+?)(?:\.|!|$)/i] },
-];
-
-function extractMemories(messages: ChatMessage[]): { label: string; value: string }[] {
-  const memories: { label: string; value: string }[] = [];
-  const seen = new Set<string>();
-
-  for (const msg of messages) {
-    if (!msg.isUser) continue;
-    for (const { label, patterns } of MEMORY_PATTERNS) {
-      for (const pattern of patterns) {
-        const match = msg.message.match(pattern);
-        if (match) {
-          const value = (match[2] || match[1]).trim();
-          const key = `${label}:${value.toLowerCase()}`;
-          if (!seen.has(key) && value.length > 1 && value.length < 60) {
-            seen.add(key);
-            memories.push({ label, value });
-          }
-        }
-      }
-    }
-  }
-  return memories;
+  userName: string;
+  memories: ExtractedMemories;
+  isExtracting: boolean;
+  onReExtract: () => void;
+  onClearMemories: () => void;
 }
 
 // Cost estimates (Gemini Flash approximate pricing)
 const COST_PER_M_INPUT = 0.10;
 const COST_PER_M_OUTPUT = 0.40;
+// Flash Lite pricing for memory extraction
+const COST_PER_M_INPUT_LITE = 0.025;
+const COST_PER_M_OUTPUT_LITE = 0.10;
+
 function estimateCost(promptTokens: number, completionTokens: number): string {
   const cost = (promptTokens / 1_000_000) * COST_PER_M_INPUT + (completionTokens / 1_000_000) * COST_PER_M_OUTPUT;
+  return cost < 0.001 ? "<$0.001" : `$${cost.toFixed(4)}`;
+}
+
+function estimateMemoryCost(totalTokens: number): string {
+  // Rough split: ~80% input, ~20% output for extraction
+  const input = totalTokens * 0.8;
+  const output = totalTokens * 0.2;
+  const cost = (input / 1_000_000) * COST_PER_M_INPUT_LITE + (output / 1_000_000) * COST_PER_M_OUTPUT_LITE;
   return cost < 0.001 ? "<$0.001" : `$${cost.toFixed(4)}`;
 }
 
@@ -77,9 +60,13 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   sessionStats,
   allTimeStats,
   onResetAllTime,
+  userName,
+  memories,
+  isExtracting,
+  onReExtract,
+  onClearMemories,
 }) => {
   const [tab, setTab] = useState<Tab>("prompt");
-  const memories = useMemo(() => extractMemories(chatMessages), [chatMessages]);
 
   const sessionMetrics = useMemo(() => {
     const msgs = sessionStats.messages;
@@ -103,12 +90,35 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     };
   }, [sessionStats]);
 
+  // Conversation topics (simple word extraction, filtered)
+  const topics = useMemo(() => {
+    const topicWords = new Set<string>();
+    const stopWords = new Set(["the", "a", "an", "is", "it", "i", "you", "we", "they", "my", "your", "do", "does", "did", "have", "has", "had", "was", "were", "be", "been", "am", "are", "what", "how", "why", "when", "where", "who", "that", "this", "and", "or", "but", "so", "if", "to", "of", "in", "on", "at", "for", "with", "about", "from", "up", "out", "not", "no", "yes", "can", "will", "would", "could", "should", "just", "like", "think", "know", "really", "very", "too", "also", "don't", "dont", "it's", "its", "i'm", "im", "kind", "actually", "pretty", "much", "want", "going", "thing", "things", "well", "yeah", "okay", "sure", "right", "good", "nice", "cool", "great", "some", "more", "then", "than", "them", "here", "there", "been", "being", "into", "over", "only", "come", "came", "make", "made", "take", "took", "tell", "told", "said", "says", "goes", "went", "back", "still", "even", "ever", "never", "always"]);
+    for (const msg of chatMessages) {
+      if (!msg.isUser) continue;
+      const words = msg.message.toLowerCase().replace(/[^a-z\s]/g, "").split(/\s+/);
+      for (const w of words) {
+        if (w.length > 3 && !stopWords.has(w)) {
+          topicWords.add(w);
+        }
+      }
+    }
+    return Array.from(topicWords).slice(0, 15);
+  }, [chatMessages]);
+
   if (!isOpen) return null;
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "prompt", label: "Prompt" },
     { id: "memory", label: "Memory" },
     { id: "stats", label: "Stats" },
+  ];
+
+  const memoryCategories: { label: string; items: string[]; color: string }[] = [
+    { label: "Likes", items: memories.likes, color: "hsl(var(--creature-frog-glow))" },
+    { label: "Dislikes", items: memories.dislikes, color: "hsl(0, 60%, 60%)" },
+    { label: "Feelings", items: memories.feelings, color: "hsl(280, 60%, 65%)" },
+    { label: "Topics", items: memories.topics, color: "hsl(200, 60%, 60%)" },
   ];
 
   return (
@@ -177,51 +187,104 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               />
             </div>
             <p className="text-[10px] text-muted-foreground/40 leading-relaxed">
-              Changes apply on next message. System prompt + rules are combined and sent to the model.
-              Changing either starts a new stats session for A/B comparison.
+              Changes apply on next message. System prompt + rules + memories are combined and sent to the model.
+              Changing prompt/rules starts a new stats session for A/B comparison.
             </p>
           </>
         )}
 
         {tab === "memory" && (
           <>
+            {/* Fixed known name */}
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Extracted Memories ({memories.length})
+                Known Identity
               </label>
-              <p className="text-[10px] text-muted-foreground/40 mt-1 mb-3">
-                Facts extracted from user messages. On a real device, these would persist in local storage.
-              </p>
+              <div
+                className="mt-2 flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[hsl(var(--creature-frog))]/30"
+                style={{ background: "hsla(120, 20%, 15%, 0.4)" }}
+              >
+                <span className="text-[10px] font-bold text-[hsl(var(--creature-frog-glow))] uppercase shrink-0 w-14">
+                  Name
+                </span>
+                <span className="text-xs text-foreground/90 font-medium">{userName}</span>
+                <span className="text-[9px] text-muted-foreground/40 ml-auto">from onboarding</span>
+              </div>
+              {memories.age !== null && (
+                <div
+                  className="mt-1.5 flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[hsl(var(--creature-frog))]/30"
+                  style={{ background: "hsla(120, 20%, 15%, 0.4)" }}
+                >
+                  <span className="text-[10px] font-bold text-[hsl(var(--creature-frog-glow))] uppercase shrink-0 w-14">
+                    Age
+                  </span>
+                  <span className="text-xs text-foreground/90 font-medium">{memories.age}</span>
+                  <span className="text-[9px] text-muted-foreground/40 ml-auto">extracted</span>
+                </div>
+              )}
             </div>
-            {memories.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-sm text-muted-foreground/50">No memories extracted yet</p>
-                <p className="text-[10px] text-muted-foreground/30 mt-1">
-                  The child needs to share things like "I like dinosaurs" or "My name is Sam"
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {memories.map((m, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-2 px-3 py-2 rounded-lg border border-border/20"
-                    style={{ background: "hsla(120, 20%, 15%, 0.3)" }}
+
+            {/* LLM-extracted memories by category */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Extracted Memories
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={onClearMemories}
+                    className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
                   >
-                    <span className="text-[10px] font-bold text-[hsl(var(--creature-frog-glow))] uppercase shrink-0 mt-0.5 w-14">
-                      {m.label}
-                    </span>
-                    <span className="text-xs text-foreground/80">{m.value}</span>
-                  </div>
-                ))}
+                    Clear
+                  </button>
+                  <button
+                    onClick={onReExtract}
+                    disabled={isExtracting}
+                    className="flex items-center gap-1 text-[10px] text-[hsl(var(--creature-frog-glow))]/70 hover:text-[hsl(var(--creature-frog-glow))] transition-colors disabled:opacity-40"
+                  >
+                    <RefreshCw size={10} className={isExtracting ? "animate-spin" : ""} />
+                    {isExtracting ? "Extracting…" : "Re-extract"}
+                  </button>
+                </div>
               </div>
-            )}
+              <p className="text-[10px] text-muted-foreground/40 mb-3">
+                Facts extracted via LLM after each response. Accumulated across sessions.
+              </p>
+
+              {memoryCategories.map((cat) => (
+                <div key={cat.label} className="mb-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: cat.color }}>
+                    {cat.label}
+                  </p>
+                  {cat.items.length === 0 ? (
+                    <p className="text-[10px] text-muted-foreground/30 pl-1">None yet</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {cat.items.map((item, i) => (
+                        <span
+                          key={i}
+                          className="text-[10px] px-2 py-1 rounded-full border text-foreground/70"
+                          style={{
+                            borderColor: `${cat.color}33`,
+                            background: `${cat.color}15`,
+                          }}
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Conversation topics word cloud */}
             <div className="mt-4">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Conversation Topics
+                Word Cloud
               </label>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {getTopics(chatMessages).map((topic, i) => (
+                {topics.map((topic, i) => (
                   <span
                     key={i}
                     className="text-[10px] px-2 py-1 rounded-full border border-border/20 text-muted-foreground/60"
@@ -230,7 +293,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
                     {topic}
                   </span>
                 ))}
-                {getTopics(chatMessages).length === 0 && (
+                {topics.length === 0 && (
                   <span className="text-[10px] text-muted-foreground/30">No topics yet</span>
                 )}
               </div>
@@ -311,7 +374,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               <div className="grid grid-cols-2 gap-2">
                 <StatCard label="Total Messages" value={allTimeStats.totalMessages} />
                 <StatCard
-                  label="Est. Total Cost"
+                  label="Est. Chat Cost"
                   value={estimateCost(allTimeStats.totalPromptTokens, allTimeStats.totalCompletionTokens)}
                 />
                 <StatCard label="Prompt Tokens" value={allTimeStats.totalPromptTokens.toLocaleString()} />
@@ -320,6 +383,23 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
                 <StatCard label="Total Tokens" value={allTimeStats.totalTokens.toLocaleString()} />
               </div>
             </div>
+
+            {/* Memory extraction stats */}
+            {allTimeStats.memoryExtractionCalls > 0 && (
+              <>
+                <div className="border-t border-border/20" />
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 block">
+                    Memory Extraction
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <StatCard label="Extractions" value={allTimeStats.memoryExtractionCalls} />
+                    <StatCard label="Tokens Used" value={allTimeStats.memoryExtractionTokens.toLocaleString()} />
+                    <StatCard label="Est. Cost" value={estimateMemoryCost(allTimeStats.memoryExtractionTokens)} />
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
@@ -344,23 +424,6 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
       <p className="text-sm font-semibold text-foreground/80 mt-0.5">{String(value)}</p>
     </div>
   );
-}
-
-// Simple topic extraction from conversation
-function getTopics(messages: ChatMessage[]): string[] {
-  const topicWords = new Set<string>();
-  const stopWords = new Set(["the", "a", "an", "is", "it", "i", "you", "we", "they", "my", "your", "do", "does", "did", "have", "has", "had", "was", "were", "be", "been", "am", "are", "what", "how", "why", "when", "where", "who", "that", "this", "and", "or", "but", "so", "if", "to", "of", "in", "on", "at", "for", "with", "about", "from", "up", "out", "not", "no", "yes", "can", "will", "would", "could", "should", "just", "like", "think", "know", "really", "very", "too", "also", "don't", "dont", "it's", "its", "i'm", "im", "kind", "actually", "pretty", "much"]);
-
-  for (const msg of messages) {
-    if (!msg.isUser) continue;
-    const words = msg.message.toLowerCase().replace(/[^a-z\s]/g, "").split(/\s+/);
-    for (const w of words) {
-      if (w.length > 3 && !stopWords.has(w)) {
-        topicWords.add(w);
-      }
-    }
-  }
-  return Array.from(topicWords).slice(0, 15);
 }
 
 export default ConfigPanel;

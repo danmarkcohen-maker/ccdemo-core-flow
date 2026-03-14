@@ -21,9 +21,10 @@ interface ChatScreenProps {
   resumeMode?: boolean;
   systemPrompt?: string;
   onUsage?: (userMsgLength: number, assistantMsgLength: number, usage?: import("@/lib/streamFrogChat").UsageData) => void;
+  onResponseComplete?: (messages: { role: "user" | "assistant"; content: string }[]) => void;
 }
 
-const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false, systemPrompt, onUsage }) => {
+const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false, systemPrompt, onUsage, onResponseComplete }) => {
   const [showThinking, setShowThinking] = useState(false);
   const [speakingCreature, setSpeakingCreature] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -110,11 +111,17 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
         setSpeakingCreature(false);
         // Finalize: remove liveStream flag
         if (assistantBufferRef.current) {
-          onMessagesChange([
+          const finalMessages = [
             ...updatedMessages,
             { sender: "Frog", message: assistantBufferRef.current, isUser: false },
-          ]);
+          ];
+          onMessagesChange(finalMessages);
           onUsage?.(userText.length, assistantBufferRef.current.length, usageData);
+          // Trigger memory extraction
+          onResponseComplete?.(finalMessages.map(m => ({
+            role: m.isUser ? "user" as const : "assistant" as const,
+            content: m.message,
+          })));
         }
       },
       onError: (error) => {

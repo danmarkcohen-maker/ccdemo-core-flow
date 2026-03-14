@@ -13,7 +13,7 @@ const DEFAULT_RULES = `- Maximum 2-3 sentences per response
 const STORAGE_KEY_PROMPT = "craiture_system_prompt";
 const STORAGE_KEY_RULES = "craiture_rules";
 const STORAGE_KEY_STATS = "craiture_all_time_stats";
-const STORAGE_KEY_SESSIONS = "craiture_session_history";
+const STORAGE_KEY_MEMORIES = "craiture_memories";
 
 export interface MessageStat {
   timestamp: number;
@@ -35,10 +35,27 @@ export interface AllTimeStats {
   totalCompletionTokens: number;
   totalTokens: number;
   sessions: { promptHash: string; messageCount: number; startedAt: number }[];
+  memoryExtractionTokens: number;
+  memoryExtractionCalls: number;
 }
 
+export interface ExtractedMemories {
+  age: number | null;
+  likes: string[];
+  dislikes: string[];
+  feelings: string[];
+  topics: string[];
+}
+
+const EMPTY_MEMORIES: ExtractedMemories = {
+  age: null,
+  likes: [],
+  dislikes: [],
+  feelings: [],
+  topics: [],
+};
+
 function hashPrompt(prompt: string, rules: string): string {
-  // Simple hash for session boundary detection
   const str = prompt + "|||" + rules;
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -48,6 +65,22 @@ function hashPrompt(prompt: string, rules: string): string {
   }
   return hash.toString(36);
 }
+
+function mergeMemories(existing: ExtractedMemories, incoming: ExtractedMemories): ExtractedMemories {
+  const mergeUnique = (a: string[], b: string[]) => {
+    const set = new Set([...a, ...b].map(s => s.toLowerCase().trim()));
+    return Array.from(set).filter(Boolean);
+  };
+  return {
+    age: incoming.age ?? existing.age,
+    likes: mergeUnique(existing.likes, incoming.likes),
+    dislikes: mergeUnique(existing.dislikes, incoming.dislikes),
+    feelings: incoming.feelings.length > 0 ? incoming.feelings : existing.feelings, // feelings = current state, replace
+    topics: mergeUnique(existing.topics, incoming.topics),
+  };
+}
+
+const EXTRACT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-memories`;
 
 export function useConfigPanel() {
   const [isOpen, setIsOpen] = useState(false);
@@ -67,11 +100,29 @@ export function useConfigPanel() {
   const [allTimeStats, setAllTimeStats] = useState<AllTimeStats>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_STATS);
-      return stored ? JSON.parse(stored) : { totalMessages: 0, totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0, sessions: [] };
+      const parsed = stored ? JSON.parse(stored) : null;
+      return {
+        totalMessages: parsed?.totalMessages || 0,
+        totalPromptTokens: parsed?.totalPromptTokens || 0,
+        totalCompletionTokens: parsed?.totalCompletionTokens || 0,
+        totalTokens: parsed?.totalTokens || 0,
+        sessions: parsed?.sessions || [],
+        memoryExtractionTokens: parsed?.memoryExtractionTokens || 0,
+        memoryExtractionCalls: parsed?.memoryExtractionCalls || 0,
+      };
     } catch {
-      return { totalMessages: 0, totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0, sessions: [] };
+      return { totalMessages: 0, totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0, sessions: [], memoryExtractionTokens: 0, memoryExtractionCalls: 0 };
     }
   });
+  const [memories, setMemories] = useState<ExtractedMemories>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_MEMORIES);
+      return stored ? JSON.parse(stored) : EMPTY_MEMORIES;
+    } catch {
+      return EMPTY_MEMORIES;
+    }
+  });
+  const [isExtracting, setIsExtracting] = useState(false);
 
   const prevHashRef = useRef(sessionStats.promptHash);
 
@@ -101,11 +152,15 @@ export function useConfigPanel() {
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(allTimeStats));
   }, [allTimeStats]);
 
+  // Persist memories
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_MEMORIES, JSON.stringify(memories));
+  }, [memories]);
+
   // Detect prompt change → new session
   useEffect(() => {
     const newHash = hashPrompt(systemPrompt, rules);
     if (newHash !== prevHashRef.current) {
-      // Save current session to history
       if (sessionStats.messages.length > 0) {
         setAllTimeStats((prev) => ({
           ...prev,
@@ -121,7 +176,66 @@ export function useConfigPanel() {
     }
   }, [systemPrompt, rules]);
 
-  const combinedPrompt = `${systemPrompt}\n\n## Behavioral Rules\n${rules}`;
+  // Build combined prompt with memories injected
+  const buildCombinedPrompt = useCallback((userName: string) => {
+    let memoryBlock = "";
+    const parts: string[] = [];
+    if (userName) parts.push(`Name: ${userName}`);
+    if (memories.age) parts.push(`Age: ${memories.age}`);
+    if (memories.likes.length > 0) parts.push(`Likes: ${memories.likes.join(", ")}`);
+    if (memories.dislikes.length > 0) parts.push(`Dislikes: ${memories.dislikes.join(", ")}`);
+    if (memories.feelings.length > 0) parts.push(`Current feelings: ${memories.feelings.join(", ")}`);
+    if (memories.topics.length > 0) parts.push(`Topics discussed: ${memories.topics.join(", ")}`);
+
+    if (parts.length > 0) {
+      memoryBlock = `\n\n## What you know about the child\n${parts.join("\n")}`;
+    }
+
+    return `${systemPrompt}${memoryBlock}\n\n## Behavioral Rules\n${rules}`;
+  }, [systemPrompt, rules, memories]);
+
+  const extractMemories = useCallback(async (
+    messages: { role: "user" | "assistant"; content: string }[],
+    knownName: string
+  ) => {
+    if (isExtracting) return;
+    setIsExtracting(true);
+    try {
+      const resp = await fetch(EXTRACT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ messages, knownName }),
+      });
+
+      if (!resp.ok) {
+        console.warn("Memory extraction failed:", resp.status);
+        return;
+      }
+
+      const data = await resp.json();
+      if (data.memories) {
+        setMemories((prev) => mergeMemories(prev, data.memories));
+      }
+      if (data.usage) {
+        setAllTimeStats((prev) => ({
+          ...prev,
+          memoryExtractionTokens: prev.memoryExtractionTokens + (data.usage.total_tokens || 0),
+          memoryExtractionCalls: prev.memoryExtractionCalls + 1,
+        }));
+      }
+    } catch (e) {
+      console.warn("Memory extraction error:", e);
+    } finally {
+      setIsExtracting(false);
+    }
+  }, [isExtracting]);
+
+  const clearMemories = useCallback(() => {
+    setMemories(EMPTY_MEMORIES);
+  }, []);
 
   const recordUsage = useCallback((userMsgLength: number, assistantMsgLength: number, usage?: UsageData) => {
     const stat: MessageStat = {
@@ -148,7 +262,7 @@ export function useConfigPanel() {
   }, []);
 
   const resetAllTimeStats = useCallback(() => {
-    const empty: AllTimeStats = { totalMessages: 0, totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0, sessions: [] };
+    const empty: AllTimeStats = { totalMessages: 0, totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0, sessions: [], memoryExtractionTokens: 0, memoryExtractionCalls: 0 };
     setAllTimeStats(empty);
     setSessionStats((prev) => ({ ...prev, messages: [] }));
   }, []);
@@ -160,11 +274,15 @@ export function useConfigPanel() {
     setSystemPrompt,
     rules,
     setRules,
-    combinedPrompt,
+    buildCombinedPrompt,
     sessionStats,
     allTimeStats,
     recordUsage,
     resetAllTimeStats,
+    memories,
+    extractMemories,
+    clearMemories,
+    isExtracting,
     DEFAULT_SYSTEM_PROMPT,
     DEFAULT_RULES,
   };
