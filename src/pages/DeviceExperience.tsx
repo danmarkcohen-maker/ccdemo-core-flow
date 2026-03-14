@@ -229,6 +229,17 @@ const DeviceExperience: React.FC = () => {
         sessionStats={config.sessionStats}
         allTimeStats={config.allTimeStats}
         onResetAllTime={config.resetAllTimeStats}
+        userName={userName}
+        memories={config.memories}
+        isExtracting={config.isExtracting}
+        onReExtract={() => {
+          const apiMsgs = chatMessages.map(m => ({
+            role: m.isUser ? "user" as const : "assistant" as const,
+            content: m.message,
+          }));
+          config.extractMemories(apiMsgs, userName);
+        }}
+        onClearMemories={config.clearMemories}
       />
     </div>
   );
