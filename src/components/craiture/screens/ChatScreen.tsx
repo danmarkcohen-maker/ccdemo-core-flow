@@ -3,12 +3,15 @@ import FrogCreature from "@/components/craiture/creatures/FrogCreature";
 import ChatBubble from "@/components/craiture/ChatBubble";
 import ThinkingDots from "@/components/craiture/ThinkingDots";
 import ChatInput from "@/components/craiture/ChatInput";
+import { streamFrogChat } from "@/lib/streamFrogChat";
+import { toast } from "sonner";
 
 export interface ChatMessage {
   sender: string;
   message: string;
   isUser: boolean;
   streaming?: boolean;
+  liveStream?: boolean;
 }
 
 interface ChatScreenProps {
@@ -18,16 +21,14 @@ interface ChatScreenProps {
   resumeMode?: boolean;
 }
 
-const scriptedResponses: Record<string, string> = {
-  default: "Ribbit! That's a great question. Let me think about it... 🐸",
-};
-
 const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false }) => {
   const [showThinking, setShowThinking] = useState(false);
   const [speakingCreature, setSpeakingCreature] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [greeted, setGreeted] = useState(resumeMode || messages.length > 0);
+  const assistantBufferRef = useRef("");
 
   // Initial greeting
   useEffect(() => {
@@ -54,27 +55,69 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, showThinking]);
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
-    const userMsg: ChatMessage = { sender: userName, message: inputValue.trim(), isUser: true };
-    onMessagesChange([...messages, userMsg]);
+  const handleSend = async () => {
+    if (!inputValue.trim() || isStreaming) return;
+    const userText = inputValue.trim();
+    const userMsg: ChatMessage = { sender: userName, message: userText, isUser: true };
+    const updatedMessages = [...messages, userMsg];
+    onMessagesChange(updatedMessages);
     setInputValue("");
+    setIsStreaming(true);
 
+    // Show thinking after brief delay
     setTimeout(() => {
       setShowThinking(true);
       setSpeakingCreature(true);
-    }, 600);
-    setTimeout(() => {
-      setShowThinking(false);
-      const response: ChatMessage = {
-        sender: "Frog",
-        message: scriptedResponses.default,
-        isUser: false,
-        streaming: true,
-      };
-      onMessagesChange([...messages, userMsg, response]);
-      setTimeout(() => setSpeakingCreature(false), 2000);
-    }, 2400);
+    }, 400);
+
+    // Build conversation history for the API (last 10 messages)
+    const apiMessages = updatedMessages.map((m) => ({
+      role: m.isUser ? "user" as const : "assistant" as const,
+      content: m.message,
+    }));
+
+    assistantBufferRef.current = "";
+    let firstDelta = true;
+
+    await streamFrogChat({
+      messages: apiMessages,
+      onDelta: (chunk) => {
+        if (firstDelta) {
+          firstDelta = false;
+          setShowThinking(false);
+          // Add initial assistant message
+          assistantBufferRef.current = chunk;
+          onMessagesChange([
+            ...updatedMessages,
+            { sender: "Frog", message: chunk, isUser: false, liveStream: true },
+          ]);
+        } else {
+          assistantBufferRef.current += chunk;
+          onMessagesChange([
+            ...updatedMessages,
+            { sender: "Frog", message: assistantBufferRef.current, isUser: false, liveStream: true },
+          ]);
+        }
+      },
+      onDone: () => {
+        setShowThinking(false);
+        setIsStreaming(false);
+        setSpeakingCreature(false);
+        // Finalize: remove liveStream flag
+        if (assistantBufferRef.current) {
+          onMessagesChange([
+            ...updatedMessages,
+            { sender: "Frog", message: assistantBufferRef.current, isUser: false },
+          ]);
+        }
+      },
+      onError: (error) => {
+        toast.error(error);
+        setShowThinking(false);
+        setIsStreaming(false);
+        setSpeakingCreature(false);
+      },
+    });
   };
 
   return (
@@ -100,6 +143,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
               isUser={msg.isUser}
               creatureType="frog"
               streaming={msg.streaming}
+              liveStream={msg.liveStream}
             />
           ))}
           {showThinking && <ThinkingDots />}
