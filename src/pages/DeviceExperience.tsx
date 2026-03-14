@@ -7,6 +7,8 @@ import TwoPlayerScreen from "@/components/craiture/screens/TwoPlayerScreen";
 import type { TwoPlayerHandle } from "@/components/craiture/screens/TwoPlayerScreen";
 import FourPlayerScreen from "@/components/craiture/screens/FourPlayerScreen";
 import type { FourPlayerHandle } from "@/components/craiture/screens/FourPlayerScreen";
+import ConfigPanel from "@/components/craiture/ConfigPanel";
+import { useConfigPanel } from "@/hooks/useConfigPanel";
 import { motion, AnimatePresence } from "framer-motion";
 
 type Screen = "onboarding" | "chat";
