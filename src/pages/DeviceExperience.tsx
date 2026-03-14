@@ -39,6 +39,7 @@ const DeviceExperience: React.FC = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(resumeHistory);
   const [key, setKey] = useState(0);
   const [chatMounted, setChatMounted] = useState(false);
+  const config = useConfigPanel();
 
   const handleOnboardingComplete = useCallback((name: string) => {
     setUserName(name);
