@@ -41,10 +41,10 @@ const DeviceExperience: React.FC = () => {
   const [chatMounted, setChatMounted] = useState(false);
   const config = useConfigPanel();
 
-  const handleOnboardingComplete = useCallback((name: string, topics?: string[]) => {
+  const handleOnboardingComplete = useCallback((name: string, age: number, topics?: string[]) => {
     setUserName(name);
+    config.initializeForAge(age);
     if (topics && topics.length > 0) {
-      // Seed selected topics into memories as initial interests
       config.seedTopics(topics);
     }
     setChatMessages([]);
