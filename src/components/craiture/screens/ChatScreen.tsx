@@ -24,6 +24,8 @@ interface ChatScreenProps {
   onResponseComplete?: (messages: { role: "user" | "assistant"; content: string }[]) => void;
 }
 
+const OPENER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-opener`;
+
 const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false, systemPrompt, onUsage, onResponseComplete }) => {
   const [showThinking, setShowThinking] = useState(false);
   const [speakingCreature, setSpeakingCreature] = useState(false);
@@ -33,25 +35,68 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
   const [greeted, setGreeted] = useState(resumeMode || messages.length > 0);
   const assistantBufferRef = useRef("");
 
-  // Initial greeting
+  // Initial greeting — fetch from LLM
   useEffect(() => {
     if (greeted) return;
-    const t1 = setTimeout(() => {
+
+    let cancelled = false;
+
+    const fetchOpener = async () => {
       setSpeakingCreature(true);
       setShowThinking(true);
-    }, 800);
-    const t2 = setTimeout(() => {
+
+      // Read age and topics from localStorage for the opener request
+      let age = 10;
+      let topics: string[] = [];
+      try {
+        const storedAge = localStorage.getItem("craiture_child_age");
+        if (storedAge) age = parseInt(storedAge, 10);
+        const storedMemories = localStorage.getItem("craiture_memories");
+        if (storedMemories) {
+          const mem = JSON.parse(storedMemories);
+          if (mem.likes && mem.likes.length > 0) topics = mem.likes;
+        }
+      } catch {}
+
+      let opener = `Hey ${userName}! What's on your mind? 🐸`;
+
+      try {
+        const resp = await fetch(OPENER_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ name: userName, age, topics }),
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.opener) opener = data.opener;
+        }
+      } catch (e) {
+        console.warn("Failed to generate opener, using fallback:", e);
+      }
+
+      if (cancelled) return;
+
       setShowThinking(false);
       onMessagesChange([{
         sender: "Frog",
-        message: `Hey ${userName}! What's on your mind? 🐸`,
+        message: opener,
         isUser: false,
         streaming: true,
       }]);
       setGreeted(true);
       setTimeout(() => setSpeakingCreature(false), 2000);
-    }, 2300);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    };
+
+    // Small delay before showing thinking
+    const t = setTimeout(fetchOpener, 800);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [greeted, userName, onMessagesChange]);
 
   useEffect(() => {
@@ -67,13 +112,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
     setInputValue("");
     setIsStreaming(true);
 
-    // Show thinking after brief delay
     setTimeout(() => {
       setShowThinking(true);
       setSpeakingCreature(true);
     }, 400);
 
-    // Build conversation history for the API (last 10 messages)
     const apiMessages = updatedMessages.map((m) => ({
       role: m.isUser ? "user" as const : "assistant" as const,
       content: m.message,
@@ -91,7 +134,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
         if (firstDelta) {
           firstDelta = false;
           setShowThinking(false);
-          // Add initial assistant message
           assistantBufferRef.current = chunk;
           onMessagesChange([
             ...updatedMessages,
@@ -109,7 +151,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
         setShowThinking(false);
         setIsStreaming(false);
         setSpeakingCreature(false);
-        // Finalize: remove liveStream flag
         if (assistantBufferRef.current) {
           const finalMessages = [
             ...updatedMessages,
@@ -117,7 +158,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
           ];
           onMessagesChange(finalMessages);
           onUsage?.(userText.length, assistantBufferRef.current.length, usageData);
-          // Trigger memory extraction
           onResponseComplete?.(finalMessages.map(m => ({
             role: m.isUser ? "user" as const : "assistant" as const,
             content: m.message,

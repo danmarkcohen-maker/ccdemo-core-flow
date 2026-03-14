@@ -62,8 +62,7 @@ const DeviceExperience: React.FC = () => {
   };
 
   const handleHardReset = () => {
-    // Clear all on-device data: memories, name, chat, stats
-    config.clearMemories();
+    config.hardReset();
     config.resetAllTimeStats();
     setUserName("Beth");
     setOverlay(null);
