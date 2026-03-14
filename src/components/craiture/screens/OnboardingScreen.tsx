@@ -174,27 +174,39 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
-                className="flex flex-wrap gap-3 justify-center mt-2"
+                className="space-y-4"
               >
-                {["Science", "Art", "Games", "Music", "Nature", "Stories"].map((topic, i) => (
-                  <motion.button
-                    key={topic}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.08 }}
-                    onClick={() => handleTopicSelect(topic)}
-                    className={`px-6 py-3 rounded-full text-[17px] font-medium border border-white/[0.1] hover:text-foreground hover:scale-105 active:scale-95 transition-all duration-200 ${
-                      selectedTopics.includes(topic) ? "text-foreground ring-2 ring-creature-frog-glow/50" : "text-foreground/85"
-                    }`}
-                    style={{
-                      background: topicColors[i],
-                      boxShadow: "0 3px 15px hsla(0, 0%, 0%, 0.25)",
-                      ...fontStyle,
-                    }}
-                  >
-                    {topic}
-                  </motion.button>
-                ))}
+                <div className="flex flex-wrap gap-3 justify-center">
+                  {["Science", "Art", "Games", "Music", "Nature", "Stories"].map((topic, i) => (
+                    <motion.button
+                      key={topic}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.08 }}
+                      onClick={() => handleTopicSelect(topic)}
+                      className={`px-6 py-3 rounded-full text-[17px] font-medium border border-white/[0.1] hover:text-foreground hover:scale-105 active:scale-95 transition-all duration-200 ${
+                        selectedTopics.includes(topic) ? "text-foreground ring-2 ring-creature-frog-glow/50 scale-105" : "text-foreground/85"
+                      }`}
+                      style={{
+                        background: topicColors[i],
+                        boxShadow: "0 3px 15px hsla(0, 0%, 0%, 0.25)",
+                        ...fontStyle,
+                      }}
+                    >
+                      {topic}
+                    </motion.button>
+                  ))}
+                </div>
+                <motion.button
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  onClick={handleTopicsDone}
+                  className="mx-auto block px-8 py-3 rounded-full text-[18px] font-medium bg-creature-frog text-foreground hover:bg-creature-frog-glow active:scale-95 transition-all duration-200"
+                  style={{ boxShadow: "0 4px 15px hsla(120, 30%, 25%, 0.3)", ...fontStyle }}
+                >
+                  {selectedTopics.length > 0 ? "Let's go! 🐸" : "Skip →"}
+                </motion.button>
               </motion.div>
             )}
           </AnimatePresence>
