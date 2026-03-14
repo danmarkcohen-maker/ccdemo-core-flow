@@ -80,9 +80,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
 
     assistantBufferRef.current = "";
     let firstDelta = true;
+    let usageData: import("@/lib/streamFrogChat").UsageData | undefined;
 
     await streamFrogChat({
       messages: apiMessages,
+      systemPrompt,
+      onUsage: (u) => { usageData = u; },
       onDelta: (chunk) => {
         if (firstDelta) {
           firstDelta = false;
