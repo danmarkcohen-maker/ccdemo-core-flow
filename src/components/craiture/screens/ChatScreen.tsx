@@ -111,11 +111,17 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
         setSpeakingCreature(false);
         // Finalize: remove liveStream flag
         if (assistantBufferRef.current) {
-          onMessagesChange([
+          const finalMessages = [
             ...updatedMessages,
             { sender: "Frog", message: assistantBufferRef.current, isUser: false },
-          ]);
+          ];
+          onMessagesChange(finalMessages);
           onUsage?.(userText.length, assistantBufferRef.current.length, usageData);
+          // Trigger memory extraction
+          onResponseComplete?.(finalMessages.map(m => ({
+            role: m.isUser ? "user" as const : "assistant" as const,
+            content: m.message,
+          })));
         }
       },
       onError: (error) => {
