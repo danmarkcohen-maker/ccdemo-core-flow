@@ -21,6 +21,7 @@ interface ChatScreenProps {
   resumeMode?: boolean;
   systemPrompt?: string;
   onUsage?: (userMsgLength: number, assistantMsgLength: number, usage?: import("@/lib/streamFrogChat").UsageData) => void;
+  onResponseComplete?: (messages: { role: "user" | "assistant"; content: string }[]) => void;
 }
 
 const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false, systemPrompt, onUsage }) => {
