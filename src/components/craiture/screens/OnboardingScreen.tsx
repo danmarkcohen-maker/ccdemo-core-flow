@@ -4,7 +4,7 @@ import Fireflies from "@/components/craiture/Fireflies";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface OnboardingScreenProps {
-  onComplete: (name: string, topics?: string[]) => void;
+  onComplete: (name: string, age: number, topics?: string[]) => void;
 }
 
 const topicColors = [
@@ -16,12 +16,25 @@ const topicColors = [
   "hsla(20, 45%, 35%, 0.5)",
 ];
 
+const ageColors = [
+  "hsla(120, 35%, 30%, 0.5)",
+  "hsla(35, 45%, 35%, 0.5)",
+  "hsla(210, 35%, 35%, 0.5)",
+  "hsla(280, 30%, 35%, 0.5)",
+  "hsla(160, 35%, 30%, 0.5)",
+  "hsla(20, 45%, 35%, 0.5)",
+  "hsla(340, 35%, 35%, 0.5)",
+  "hsla(60, 35%, 30%, 0.5)",
+  "hsla(190, 35%, 30%, 0.5)",
+];
+
 const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
 
 const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [submittedName, setSubmittedName] = useState("");
+  const [selectedAge, setSelectedAge] = useState<number | null>(null);
   const [creatureOpacity, setCreatureOpacity] = useState(0.0);
   const [screenOn, setScreenOn] = useState(false);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -38,8 +51,16 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
     setSubmittedName(name.trim());
     setStep(4);
     setCreatureOpacity(0.38);
-    setTimeout(() => setStep(5), 2500);
+    // After greeting, ask for age
+    setTimeout(() => { setStep(5); }, 2500);
     setTimeout(() => { setStep(6); setCreatureOpacity(0.42); }, 4500);
+  };
+
+  const handleAgeSelect = (age: number) => {
+    setSelectedAge(age);
+    // Transition to topics after selecting age
+    setTimeout(() => { setStep(7); setCreatureOpacity(0.45); }, 800);
+    setTimeout(() => { setStep(8); setCreatureOpacity(0.48); }, 2800);
   };
 
   const handleTopicSelect = (topic: string) => {
@@ -49,7 +70,8 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
   };
 
   const handleTopicsDone = () => {
-    onComplete(submittedName, selectedTopics.length > 0 ? selectedTopics : undefined);
+    if (!selectedAge) return;
+    onComplete(submittedName, selectedAge, selectedTopics.length > 0 ? selectedTopics : undefined);
   };
 
   return (
@@ -138,11 +160,12 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
           </AnimatePresence>
 
           <AnimatePresence>
-            {step >= 4 && (
+            {step >= 4 && step < 7 && (
               <motion.p
                 key="greet"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 1.2 }}
                 className="text-[26px] text-foreground/85 font-light"
                 style={fontStyle}
@@ -153,7 +176,56 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
           </AnimatePresence>
 
           <AnimatePresence>
-            {step >= 5 && (
+            {step >= 5 && step < 7 && (
+              <motion.p
+                key="ask-age"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.2 }}
+                className="text-[22px] text-foreground/55 font-light"
+                style={fontStyle}
+              >
+                How old are you?
+              </motion.p>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {step >= 6 && step < 7 && (
+              <motion.div
+                key="ages"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+                className="flex flex-wrap gap-3 justify-center"
+              >
+                {[6, 7, 8, 9, 10, 11, 12, 13, 14].map((age, i) => (
+                  <motion.button
+                    key={age}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                    onClick={() => handleAgeSelect(age)}
+                    className={`w-14 h-14 rounded-full text-[18px] font-semibold border border-white/[0.1] hover:text-foreground hover:scale-110 active:scale-95 transition-all duration-200 ${
+                      selectedAge === age ? "text-foreground ring-2 ring-creature-frog-glow/50 scale-110" : "text-foreground/85"
+                    }`}
+                    style={{
+                      background: ageColors[i],
+                      boxShadow: "0 3px 12px hsla(0, 0%, 0%, 0.25)",
+                      ...fontStyle,
+                    }}
+                  >
+                    {age}
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {step >= 7 && (
               <motion.p
                 key="interests"
                 initial={{ opacity: 0 }}
@@ -168,7 +240,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
           </AnimatePresence>
 
           <AnimatePresence>
-            {step >= 6 && (
+            {step >= 8 && (
               <motion.div
                 key="topics"
                 initial={{ opacity: 0, y: 10 }}
