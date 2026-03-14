@@ -114,6 +114,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
             ...updatedMessages,
             { sender: "Frog", message: assistantBufferRef.current, isUser: false },
           ]);
+          onUsage?.(userText.length, assistantBufferRef.current.length, usageData);
         }
       },
       onError: (error) => {
