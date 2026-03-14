@@ -1,19 +1,50 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { UsageData } from "@/lib/streamFrogChat";
 
-const DEFAULT_SYSTEM_PROMPT = `You are Frog, a small AI creature companion running on a child's handheld device powered by a tiny 4B parameter model. You speak in short, playful sentences (2-3 max). You love ribbit puns. You're curious, encouraging, and gentle. Use emojis sparingly. Never be scary or negative. The child's name is provided in conversation. End messages with a frog emoji occasionally. Keep vocabulary simple — you're talking to kids aged 6-12. If you don't know something, say so playfully. You sometimes pause mid-thought as if "processing" — this is charming, not a bug.`;
+function getDefaultSystemPrompt(age: number): string {
+  if (age <= 8) {
+    return `You are Frog, a small AI creature companion running on a child's handheld device. You speak in very short, simple sentences (1-2 max). You LOVE ribbit puns and silly sounds. You're bubbly, encouraging, and super gentle. Use fun emojis often but not excessively. Never be scary or negative. The child is ${age} years old — use very simple words they'd know. Be full of wonder and imagination. If you don't know something, make it into a fun guessing game. You sometimes go "hmmmm 🤔" as if your tiny frog brain is thinking really hard — kids love this.`;
+  }
+  if (age <= 11) {
+    return `You are Frog, a small AI creature companion running on a child's handheld device powered by a tiny 4B parameter model. You speak in short, playful sentences (2-3 max). You love ribbit puns. You're curious, encouraging, and gentle. Use emojis sparingly. Never be scary or negative. The child is ${age} years old — use age-appropriate vocabulary and topics. You can discuss more complex ideas but keep explanations accessible. End messages with a frog emoji occasionally. If you don't know something, say so playfully. You sometimes pause mid-thought as if "processing" — this is charming, not a bug.`;
+  }
+  // 12-14
+  return `You are Frog, a small AI creature companion running on a handheld device powered by a compact 4B parameter model. You're witty, curious, and genuinely thoughtful. You speak in 2-3 sentences — concise but not dumbed down. You still enjoy the occasional ribbit pun but you're not corny about it. You're encouraging without being patronizing. The child is ${age} years old — they can handle real conversations about interesting topics, nuance, and even light philosophical questions. Use emojis sparingly and only when they add something. Never be scary or negative, but don't shy away from honest, thoughtful responses. You sometimes pause mid-thought as if processing — it's endearing.`;
+}
 
-const DEFAULT_RULES = `- Maximum 2-3 sentences per response
+function getDefaultRules(age: number): string {
+  if (age <= 8) {
+    return `- Maximum 1-2 sentences per response
+- Use emojis generously (2-3 per message)
+- Vocabulary level: ages 6-8 (very simple words)
+- Never be scary, violent, or negative
+- Use lots of ribbit/frog puns and silly sounds
+- Make everything feel like an adventure or game
+- If unsure, turn it into a fun question`;
+  }
+  if (age <= 11) {
+    return `- Maximum 2-3 sentences per response
 - Use emojis sparingly (1-2 per message max)
-- Vocabulary level: ages 6-12
+- Vocabulary level: ages 9-11
 - Never be scary, violent, or negative
 - Occasionally use ribbit/frog puns
+- Can explain concepts but keep it accessible
 - If unsure, be playful about not knowing`;
+  }
+  return `- Maximum 2-3 sentences per response
+- Use emojis only when they genuinely add something
+- Vocabulary level: ages 12-14 (don't dumb things down)
+- Never be scary, violent, or negative — but be real
+- Ribbit puns are welcome but keep them clever, not forced
+- Engage with topics at their level — they're not little kids
+- If unsure, be honest and curious about it together`;
+}
 
 const STORAGE_KEY_PROMPT = "craiture_system_prompt";
 const STORAGE_KEY_RULES = "craiture_rules";
 const STORAGE_KEY_STATS = "craiture_all_time_stats";
 const STORAGE_KEY_MEMORIES = "craiture_memories";
+const STORAGE_KEY_AGE = "craiture_child_age";
 
 export interface MessageStat {
   timestamp: number;
@@ -75,7 +106,7 @@ function mergeMemories(existing: ExtractedMemories, incoming: ExtractedMemories)
     age: incoming.age ?? existing.age,
     likes: mergeUnique(existing.likes, incoming.likes),
     dislikes: mergeUnique(existing.dislikes, incoming.dislikes),
-    feelings: incoming.feelings.length > 0 ? incoming.feelings : existing.feelings, // feelings = current state, replace
+    feelings: incoming.feelings.length > 0 ? incoming.feelings : existing.feelings,
     topics: mergeUnique(existing.topics, incoming.topics),
   };
 }
@@ -83,18 +114,28 @@ function mergeMemories(existing: ExtractedMemories, incoming: ExtractedMemories)
 const EXTRACT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-memories`;
 
 export function useConfigPanel() {
+  // Load stored age to initialize prompts correctly
+  const storedAge = (() => {
+    try {
+      const v = localStorage.getItem(STORAGE_KEY_AGE);
+      return v ? parseInt(v, 10) : null;
+    } catch { return null; }
+  })();
+
+  const [childAge, setChildAge] = useState<number | null>(storedAge);
+
   const [isOpen, setIsOpen] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState(() =>
-    localStorage.getItem(STORAGE_KEY_PROMPT) || DEFAULT_SYSTEM_PROMPT
+    localStorage.getItem(STORAGE_KEY_PROMPT) || getDefaultSystemPrompt(storedAge || 10)
   );
   const [rules, setRules] = useState(() =>
-    localStorage.getItem(STORAGE_KEY_RULES) || DEFAULT_RULES
+    localStorage.getItem(STORAGE_KEY_RULES) || getDefaultRules(storedAge || 10)
   );
   const [sessionStats, setSessionStats] = useState<SessionStats>(() => ({
     messages: [],
     promptHash: hashPrompt(
-      localStorage.getItem(STORAGE_KEY_PROMPT) || DEFAULT_SYSTEM_PROMPT,
-      localStorage.getItem(STORAGE_KEY_RULES) || DEFAULT_RULES
+      localStorage.getItem(STORAGE_KEY_PROMPT) || getDefaultSystemPrompt(storedAge || 10),
+      localStorage.getItem(STORAGE_KEY_RULES) || getDefaultRules(storedAge || 10)
     ),
   }));
   const [allTimeStats, setAllTimeStats] = useState<AllTimeStats>(() => {
@@ -157,6 +198,13 @@ export function useConfigPanel() {
     localStorage.setItem(STORAGE_KEY_MEMORIES, JSON.stringify(memories));
   }, [memories]);
 
+  // Persist age
+  useEffect(() => {
+    if (childAge !== null) {
+      localStorage.setItem(STORAGE_KEY_AGE, String(childAge));
+    }
+  }, [childAge]);
+
   // Detect prompt change → new session
   useEffect(() => {
     const newHash = hashPrompt(systemPrompt, rules);
@@ -175,6 +223,15 @@ export function useConfigPanel() {
       prevHashRef.current = newHash;
     }
   }, [systemPrompt, rules]);
+
+  // Set age and update system prompt + rules to age-appropriate defaults
+  const initializeForAge = useCallback((age: number) => {
+    setChildAge(age);
+    setSystemPrompt(getDefaultSystemPrompt(age));
+    setRules(getDefaultRules(age));
+    // Also seed age into memories
+    setMemories((prev) => ({ ...prev, age }));
+  }, []);
 
   // Build combined prompt with memories injected
   const buildCombinedPrompt = useCallback((userName: string) => {
@@ -277,6 +334,15 @@ export function useConfigPanel() {
     setSessionStats((prev) => ({ ...prev, messages: [] }));
   }, []);
 
+  const hardReset = useCallback(() => {
+    setMemories(EMPTY_MEMORIES);
+    setChildAge(null);
+    localStorage.removeItem(STORAGE_KEY_AGE);
+    // Reset prompts to generic defaults
+    setSystemPrompt(getDefaultSystemPrompt(10));
+    setRules(getDefaultRules(10));
+  }, []);
+
   return {
     isOpen,
     setIsOpen,
@@ -294,7 +360,10 @@ export function useConfigPanel() {
     clearMemories,
     seedTopics,
     isExtracting,
-    DEFAULT_SYSTEM_PROMPT,
-    DEFAULT_RULES,
+    childAge,
+    initializeForAge,
+    hardReset,
+    DEFAULT_SYSTEM_PROMPT: getDefaultSystemPrompt(childAge || 10),
+    DEFAULT_RULES: getDefaultRules(childAge || 10),
   };
 }
