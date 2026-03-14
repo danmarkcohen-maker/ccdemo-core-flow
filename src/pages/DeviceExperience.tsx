@@ -202,6 +202,14 @@ const DeviceExperience: React.FC = () => {
         </button>
 
         <button
+          onClick={handleHardReset}
+          className="text-left px-4 py-3 rounded-xl text-[14px] font-medium text-muted-foreground/70 hover:text-red-400/80 border border-white/[0.06] hover:border-red-400/20 transition-all duration-200 active:scale-[0.97]"
+          style={{ background: "hsla(230, 14%, 15%, 0.6)", ...fontStyle }}
+        >
+          🧹 Hard Reset
+        </button>
+
+        <button
           onClick={handleSleepWake}
           className="text-left px-4 py-3 rounded-xl text-[14px] font-medium text-muted-foreground/70 hover:text-foreground/80 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-200 active:scale-[0.97]"
           style={{ background: "hsla(230, 14%, 15%, 0.6)", ...fontStyle }}
