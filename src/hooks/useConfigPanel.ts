@@ -362,6 +362,17 @@ export function useConfigPanel() {
     setRules(getDefaultRules(10));
   }, []);
 
+  // Persist orchestrator settings
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_SAFETY_GATE, String(safetyGateEnabled));
+  }, [safetyGateEnabled]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_INTENT_CLASS, String(intentClassificationEnabled));
+  }, [intentClassificationEnabled]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_DEFLECTIONS, safetyDeflections);
+  }, [safetyDeflections]);
+
   return {
     isOpen,
     setIsOpen,
@@ -384,5 +395,12 @@ export function useConfigPanel() {
     hardReset,
     DEFAULT_SYSTEM_PROMPT: getDefaultSystemPrompt(childAge || 10),
     DEFAULT_RULES: getDefaultRules(childAge || 10),
+    // Orchestrator settings
+    safetyGateEnabled,
+    setSafetyGateEnabled,
+    intentClassificationEnabled,
+    setIntentClassificationEnabled,
+    safetyDeflections,
+    setSafetyDeflections,
   };
 }
