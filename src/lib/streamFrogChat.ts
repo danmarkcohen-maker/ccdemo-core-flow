@@ -1,3 +1,5 @@
+import type { OrchestratorMeta, StoryState, StoryArc } from "@/lib/storyTypes";
+
 type Msg = { role: "user" | "assistant"; content: string };
 
 export interface UsageData {
@@ -15,6 +17,12 @@ export async function streamFrogChat({
   onDone,
   onError,
   onUsage,
+  onOrchestratorMeta,
+  storyState,
+  storyArcs,
+  safetyGateEnabled,
+  intentClassificationEnabled,
+  safetyDeflections,
 }: {
   messages: Msg[];
   systemPrompt?: string;
@@ -22,6 +30,12 @@ export async function streamFrogChat({
   onDone: () => void;
   onError?: (error: string) => void;
   onUsage?: (usage: UsageData) => void;
+  onOrchestratorMeta?: (meta: OrchestratorMeta) => void;
+  storyState?: StoryState;
+  storyArcs?: StoryArc[];
+  safetyGateEnabled?: boolean;
+  intentClassificationEnabled?: boolean;
+  safetyDeflections?: string;
 }) {
   const resp = await fetch(CHAT_URL, {
     method: "POST",
@@ -32,6 +46,11 @@ export async function streamFrogChat({
     body: JSON.stringify({
       messages: messages.slice(-10),
       ...(systemPrompt ? { systemPrompt } : {}),
+      ...(storyState ? { storyState } : {}),
+      ...(storyArcs ? { storyArcs } : {}),
+      safetyGateEnabled: safetyGateEnabled ?? true,
+      intentClassificationEnabled: intentClassificationEnabled ?? true,
+      ...(safetyDeflections ? { safetyDeflections } : {}),
     }),
   });
 
@@ -67,6 +86,13 @@ export async function streamFrogChat({
 
     try {
       const parsed = JSON.parse(jsonStr);
+
+      // Check for orchestrator metadata (sent after [DONE])
+      if (parsed.orchestrator && onOrchestratorMeta) {
+        onOrchestratorMeta(parsed.orchestrator);
+        return false;
+      }
+
       // Check for usage in final chunk
       if (parsed.usage && onUsage) {
         onUsage({
@@ -105,7 +131,7 @@ export async function streamFrogChat({
     }
   }
 
-  // Flush remaining
+  // Flush remaining (includes orchestrator metadata after [DONE])
   if (buffer.trim()) {
     for (const raw of buffer.split("\n")) {
       if (!raw) continue;
