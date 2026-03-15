@@ -1,3 +1,5 @@
+import type { OrchestratorMeta } from "@/hooks/useCreatureConfig";
+
 type Msg = { role: "user" | "assistant"; content: string };
 
 export interface UsageData {
@@ -11,17 +13,21 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/frog-chat`;
 export async function streamFrogChat({
   messages,
   systemPrompt,
+  orchestratorConfig,
   onDelta,
   onDone,
   onError,
   onUsage,
+  onOrchestratorMeta,
 }: {
   messages: Msg[];
   systemPrompt?: string;
+  orchestratorConfig?: Record<string, unknown>;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError?: (error: string) => void;
   onUsage?: (usage: UsageData) => void;
+  onOrchestratorMeta?: (meta: OrchestratorMeta) => void;
 }) {
   const resp = await fetch(CHAT_URL, {
     method: "POST",
@@ -32,6 +38,7 @@ export async function streamFrogChat({
     body: JSON.stringify({
       messages: messages.slice(-10),
       ...(systemPrompt ? { systemPrompt } : {}),
+      ...(orchestratorConfig ? { orchestratorConfig } : {}),
     }),
   });
 
@@ -67,6 +74,13 @@ export async function streamFrogChat({
 
     try {
       const parsed = JSON.parse(jsonStr);
+
+      // Check for orchestrator metadata (sent after [DONE])
+      if (parsed.orchestrator && onOrchestratorMeta) {
+        onOrchestratorMeta(parsed.orchestrator);
+        return false;
+      }
+
       // Check for usage in final chunk
       if (parsed.usage && onUsage) {
         onUsage({
@@ -105,7 +119,7 @@ export async function streamFrogChat({
     }
   }
 
-  // Flush remaining
+  // Flush remaining — important for orchestrator metadata which arrives after [DONE]
   if (buffer.trim()) {
     for (const raw of buffer.split("\n")) {
       if (!raw) continue;
