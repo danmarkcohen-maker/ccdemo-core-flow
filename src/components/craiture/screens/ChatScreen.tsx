@@ -4,6 +4,7 @@ import ChatBubble from "@/components/craiture/ChatBubble";
 import ThinkingDots from "@/components/craiture/ThinkingDots";
 import ChatInput from "@/components/craiture/ChatInput";
 import { streamFrogChat } from "@/lib/streamFrogChat";
+import type { OrchestratorMeta } from "@/hooks/useCreatureConfig";
 import { toast } from "sonner";
 
 export interface ChatMessage {
@@ -20,13 +21,15 @@ interface ChatScreenProps {
   onMessagesChange: (msgs: ChatMessage[]) => void;
   resumeMode?: boolean;
   systemPrompt?: string;
+  orchestratorConfig?: Record<string, unknown>;
   onUsage?: (userMsgLength: number, assistantMsgLength: number, usage?: import("@/lib/streamFrogChat").UsageData) => void;
   onResponseComplete?: (messages: { role: "user" | "assistant"; content: string }[]) => void;
+  onOrchestratorMeta?: (meta: OrchestratorMeta) => void;
 }
 
 const OPENER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-opener`;
 
-const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false, systemPrompt, onUsage, onResponseComplete }) => {
+const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false, systemPrompt, orchestratorConfig, onUsage, onResponseComplete, onOrchestratorMeta }) => {
   const [showThinking, setShowThinking] = useState(false);
   const [speakingCreature, setSpeakingCreature] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -45,7 +48,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
       setSpeakingCreature(true);
       setShowThinking(true);
 
-      // Read age and topics from localStorage for the opener request
       let age = 10;
       let topics: string[] = [];
       try {
@@ -91,7 +93,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
       setTimeout(() => setSpeakingCreature(false), 2000);
     };
 
-    // Small delay before showing thinking
     const t = setTimeout(fetchOpener, 800);
     return () => {
       cancelled = true;
@@ -129,7 +130,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
     await streamFrogChat({
       messages: apiMessages,
       systemPrompt,
+      orchestratorConfig,
       onUsage: (u) => { usageData = u; },
+      onOrchestratorMeta: (meta) => {
+        onOrchestratorMeta?.(meta);
+      },
       onDelta: (chunk) => {
         if (firstDelta) {
           firstDelta = false;
