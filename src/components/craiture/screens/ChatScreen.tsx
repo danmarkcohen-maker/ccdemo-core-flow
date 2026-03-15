@@ -22,18 +22,11 @@ interface ChatScreenProps {
   systemPrompt?: string;
   onUsage?: (userMsgLength: number, assistantMsgLength: number, usage?: import("@/lib/streamFrogChat").UsageData) => void;
   onResponseComplete?: (messages: { role: "user" | "assistant"; content: string }[]) => void;
-  // Orchestrator props (passed through to streamFrogChat when orchestrator is active)
-  storyState?: import("@/lib/storyTypes").StoryState;
-  storyArcs?: import("@/lib/storyTypes").StoryArc[];
-  safetyGateEnabled?: boolean;
-  intentClassificationEnabled?: boolean;
-  safetyDeflections?: string;
-  onOrchestratorMeta?: (meta: import("@/lib/storyTypes").OrchestratorMeta) => void;
 }
 
 const OPENER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-opener`;
 
-const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false, systemPrompt, onUsage, onResponseComplete, storyState, storyArcs, safetyGateEnabled, intentClassificationEnabled, safetyDeflections, onOrchestratorMeta }) => {
+const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false, systemPrompt, onUsage, onResponseComplete }) => {
   const [showThinking, setShowThinking] = useState(false);
   const [speakingCreature, setSpeakingCreature] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -136,12 +129,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
     await streamFrogChat({
       messages: apiMessages,
       systemPrompt,
-      storyState,
-      storyArcs,
-      safetyGateEnabled,
-      intentClassificationEnabled,
-      safetyDeflections,
-      onOrchestratorMeta,
       onUsage: (u) => { usageData = u; },
       onDelta: (chunk) => {
         if (firstDelta) {
