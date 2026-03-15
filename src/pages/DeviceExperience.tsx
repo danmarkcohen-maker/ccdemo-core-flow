@@ -9,6 +9,8 @@ import FourPlayerScreen from "@/components/craiture/screens/FourPlayerScreen";
 import type { FourPlayerHandle } from "@/components/craiture/screens/FourPlayerScreen";
 import ConfigPanel from "@/components/craiture/ConfigPanel";
 import { useConfigPanel } from "@/hooks/useConfigPanel";
+import { useCreatureConfig } from "@/hooks/useCreatureConfig";
+import type { OrchestratorMeta } from "@/hooks/useCreatureConfig";
 import { motion, AnimatePresence } from "framer-motion";
 
 type Screen = "onboarding" | "chat";
@@ -40,6 +42,12 @@ const DeviceExperience: React.FC = () => {
   const [key, setKey] = useState(0);
   const [chatMounted, setChatMounted] = useState(false);
   const config = useConfigPanel();
+  const creatureConfig = useCreatureConfig();
+
+  // Advance threads on mount
+  React.useEffect(() => {
+    creatureConfig.advanceThreads();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleOnboardingComplete = useCallback((name: string, age: number, topics?: string[]) => {
     setUserName(name);
@@ -64,6 +72,7 @@ const DeviceExperience: React.FC = () => {
   const handleHardReset = () => {
     config.hardReset();
     config.resetAllTimeStats();
+    creatureConfig.hardResetCreature();
     setUserName("Beth");
     setOverlay(null);
     setSleeping(false);
@@ -78,17 +87,13 @@ const DeviceExperience: React.FC = () => {
   };
 
   const handleHiFive = (type: "two-player" | "four-player") => {
-    if (overlay === type) {
-      // Exit: will be handled by the screen's onExit
-      return;
-    }
-    if (screen === "onboarding") return; // Can't hi-five during onboarding
+    if (overlay === type) return;
+    if (screen === "onboarding") return;
     setOverlay(type);
   };
 
   const handleOverlayExit = useCallback(() => {
     setOverlay(null);
-    // Append post-playdate Frog message
     const msg = postPlaydateMessages[Math.floor(Math.random() * postPlaydateMessages.length)];
     setChatMessages((prev) => [...prev, {
       sender: "Frog",
@@ -98,18 +103,34 @@ const DeviceExperience: React.FC = () => {
     }]);
   }, []);
 
+  const handleOrchestratorMeta = useCallback((meta: OrchestratorMeta) => {
+    creatureConfig.logOrchestratorMeta(meta);
+  }, [creatureConfig]);
+
   const twoPlayerRef = useRef<TwoPlayerHandle>(null);
   const fourPlayerRef = useRef<FourPlayerHandle>(null);
 
   const twoPlayerActive = overlay === "two-player";
   const fourPlayerActive = overlay === "four-player";
 
+  // Handle threads JSON change from config panel
+  const handleThreadsChange = useCallback((jsonStr: string) => {
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (Array.isArray(parsed)) {
+        creatureConfig.setThreads(parsed);
+      }
+    } catch {
+      // Invalid JSON — ignore until valid
+    }
+  }, [creatureConfig]);
+
   return (
     <div className="flex items-center justify-center min-h-screen gap-12 overflow-hidden" style={{ background: "hsl(220, 15%, 6%)" }}>
       {/* Device */}
       <div className="flex-shrink-0">
         <DeviceFrame>
-          {/* Persistent chat layer - always mounted once onboarding is done */}
+          {/* Persistent chat layer */}
           {chatMounted && (
             <div className="absolute inset-0" style={{ visibility: overlay ? "hidden" : "visible" }}>
               <ChatScreen
@@ -118,13 +139,15 @@ const DeviceExperience: React.FC = () => {
                 onMessagesChange={setChatMessages}
                 resumeMode={chatMessages.length > 0}
                 systemPrompt={config.buildCombinedPrompt(userName)}
+                orchestratorConfig={creatureConfig.buildOrchestratorPayload()}
                 onUsage={config.recordUsage}
                 onResponseComplete={(msgs) => config.extractMemories(msgs, userName)}
+                onOrchestratorMeta={handleOrchestratorMeta}
               />
             </div>
           )}
 
-          {/* Onboarding - only shown before first chat */}
+          {/* Onboarding */}
           <AnimatePresence mode="wait">
             {screen === "onboarding" && !chatMounted && (
               <motion.div
@@ -189,34 +212,19 @@ const DeviceExperience: React.FC = () => {
 
       {/* External Controls */}
       <div className="flex flex-col gap-3 w-[220px]">
-        <p
-          className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground/40 mb-1 font-semibold"
-          style={fontStyle}
-        >
+        <p className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground/40 mb-1 font-semibold" style={fontStyle}>
           Simulate
         </p>
 
-        <button
-          onClick={handleRestart}
-          className="text-left px-4 py-3 rounded-xl text-[14px] font-medium text-muted-foreground/70 hover:text-foreground/80 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-200 active:scale-[0.97]"
-          style={{ background: "hsla(230, 14%, 15%, 0.6)", ...fontStyle }}
-        >
+        <button onClick={handleRestart} className="text-left px-4 py-3 rounded-xl text-[14px] font-medium text-muted-foreground/70 hover:text-foreground/80 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-200 active:scale-[0.97]" style={{ background: "hsla(230, 14%, 15%, 0.6)", ...fontStyle }}>
           🔄 Restart Onboarding
         </button>
 
-        <button
-          onClick={handleHardReset}
-          className="text-left px-4 py-3 rounded-xl text-[14px] font-medium text-muted-foreground/70 hover:text-red-400/80 border border-white/[0.06] hover:border-red-400/20 transition-all duration-200 active:scale-[0.97]"
-          style={{ background: "hsla(230, 14%, 15%, 0.6)", ...fontStyle }}
-        >
+        <button onClick={handleHardReset} className="text-left px-4 py-3 rounded-xl text-[14px] font-medium text-muted-foreground/70 hover:text-red-400/80 border border-white/[0.06] hover:border-red-400/20 transition-all duration-200 active:scale-[0.97]" style={{ background: "hsla(230, 14%, 15%, 0.6)", ...fontStyle }}>
           🧹 Hard Reset
         </button>
 
-        <button
-          onClick={handleSleepWake}
-          className="text-left px-4 py-3 rounded-xl text-[14px] font-medium text-muted-foreground/70 hover:text-foreground/80 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-200 active:scale-[0.97]"
-          style={{ background: "hsla(230, 14%, 15%, 0.6)", ...fontStyle }}
-        >
+        <button onClick={handleSleepWake} className="text-left px-4 py-3 rounded-xl text-[14px] font-medium text-muted-foreground/70 hover:text-foreground/80 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-200 active:scale-[0.97]" style={{ background: "hsla(230, 14%, 15%, 0.6)", ...fontStyle }}>
           {sleeping ? "☀️ Wake" : "💤 Sleep"}
         </button>
 
@@ -264,6 +272,27 @@ const DeviceExperience: React.FC = () => {
           config.extractMemories(apiMsgs, userName);
         }}
         onClearMemories={config.clearMemories}
+        // Creature props
+        creature={creatureConfig.creature}
+        onPersonalityChange={creatureConfig.setPersonality}
+        onBackstoryChange={creatureConfig.setBackstory}
+        onThreadsChange={handleThreadsChange}
+        onDailyLifeChange={creatureConfig.setDailyLifePrompt}
+        onLedgerChange={creatureConfig.setRelationshipLedger}
+        onAddThread={creatureConfig.addThread}
+        onAdvanceAll={creatureConfig.advanceAllNow}
+        onResetCreature={creatureConfig.resetCreatureToDefaults}
+        defaultPersonality={creatureConfig.DEFAULT_PERSONALITY}
+        defaultBackstory={creatureConfig.DEFAULT_BACKSTORY}
+        defaultDailyLife={creatureConfig.DEFAULT_DAILY_LIFE}
+        // Orchestrator props
+        orchestrator={creatureConfig.orchestrator}
+        onOrchestratorChange={creatureConfig.updateOrchestrator}
+        onToggleSection={creatureConfig.toggleSection}
+        onResetOrchestrator={creatureConfig.resetOrchestratorToDefaults}
+        orchestratorLog={creatureConfig.orchestratorLog}
+        allSections={creatureConfig.ALL_SECTIONS}
+        defaultDeflections={creatureConfig.DEFAULT_DEFLECTIONS}
       />
     </div>
   );
