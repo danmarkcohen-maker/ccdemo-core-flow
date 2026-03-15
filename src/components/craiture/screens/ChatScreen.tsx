@@ -22,6 +22,13 @@ interface ChatScreenProps {
   systemPrompt?: string;
   onUsage?: (userMsgLength: number, assistantMsgLength: number, usage?: import("@/lib/streamFrogChat").UsageData) => void;
   onResponseComplete?: (messages: { role: "user" | "assistant"; content: string }[]) => void;
+  // Orchestrator props (passed through to streamFrogChat when orchestrator is active)
+  storyState?: import("@/lib/storyTypes").StoryState;
+  storyArcs?: import("@/lib/storyTypes").StoryArc[];
+  safetyGateEnabled?: boolean;
+  intentClassificationEnabled?: boolean;
+  safetyDeflections?: string;
+  onOrchestratorMeta?: (meta: import("@/lib/storyTypes").OrchestratorMeta) => void;
 }
 
 const OPENER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-opener`;
