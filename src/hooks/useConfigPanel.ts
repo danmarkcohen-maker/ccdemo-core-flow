@@ -45,6 +45,14 @@ const STORAGE_KEY_RULES = "craiture_rules";
 const STORAGE_KEY_STATS = "craiture_all_time_stats";
 const STORAGE_KEY_MEMORIES = "craiture_memories";
 const STORAGE_KEY_AGE = "craiture_child_age";
+const STORAGE_KEY_SAFETY_GATE = "craiture_safety_gate";
+const STORAGE_KEY_INTENT_CLASS = "craiture_intent_classification";
+const STORAGE_KEY_DEFLECTIONS = "craiture_safety_deflections";
+
+const DEFAULT_DEFLECTIONS = `Hmm, my brain went all foggy for a second there. What were we talking about? 🐸
+Ribbit! I got distracted by a fly. What were you saying? 🐸
+Whoa, I think I glitched for a sec. Anyway! What's up? 🐸
+My lily pad just wobbled and I lost my train of thought. Where were we? 🐸`;
 
 export interface MessageStat {
   timestamp: number;
