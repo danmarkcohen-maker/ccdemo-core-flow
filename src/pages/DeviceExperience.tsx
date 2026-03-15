@@ -9,7 +9,9 @@ import FourPlayerScreen from "@/components/craiture/screens/FourPlayerScreen";
 import type { FourPlayerHandle } from "@/components/craiture/screens/FourPlayerScreen";
 import ConfigPanel from "@/components/craiture/ConfigPanel";
 import { useConfigPanel } from "@/hooks/useConfigPanel";
+import { useStoryState } from "@/hooks/useStoryState";
 import { motion, AnimatePresence } from "framer-motion";
+import type { OrchestratorMeta } from "@/lib/storyTypes";
 
 type Screen = "onboarding" | "chat";
 type Overlay = null | "two-player" | "four-player";
@@ -39,7 +41,16 @@ const DeviceExperience: React.FC = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(resumeHistory);
   const [key, setKey] = useState(0);
   const [chatMounted, setChatMounted] = useState(false);
+  const [orchestratorLog, setOrchestratorLog] = useState<OrchestratorMeta[]>([]);
   const config = useConfigPanel();
+  const story = useStoryState();
+
+  const handleOrchestratorMeta = useCallback((meta: OrchestratorMeta) => {
+    setOrchestratorLog((prev) => [meta, ...prev].slice(0, 10));
+    if (meta.updated_story_state) {
+      story.applyUpdatedState(meta.updated_story_state);
+    }
+  }, [story]);
 
   const handleOnboardingComplete = useCallback((name: string, age: number, topics?: string[]) => {
     setUserName(name);
@@ -64,6 +75,8 @@ const DeviceExperience: React.FC = () => {
   const handleHardReset = () => {
     config.hardReset();
     config.resetAllTimeStats();
+    story.hardResetStory();
+    setOrchestratorLog([]);
     setUserName("Beth");
     setOverlay(null);
     setSleeping(false);
@@ -78,17 +91,13 @@ const DeviceExperience: React.FC = () => {
   };
 
   const handleHiFive = (type: "two-player" | "four-player") => {
-    if (overlay === type) {
-      // Exit: will be handled by the screen's onExit
-      return;
-    }
-    if (screen === "onboarding") return; // Can't hi-five during onboarding
+    if (overlay === type) return;
+    if (screen === "onboarding") return;
     setOverlay(type);
   };
 
   const handleOverlayExit = useCallback(() => {
     setOverlay(null);
-    // Append post-playdate Frog message
     const msg = postPlaydateMessages[Math.floor(Math.random() * postPlaydateMessages.length)];
     setChatMessages((prev) => [...prev, {
       sender: "Frog",
@@ -109,7 +118,6 @@ const DeviceExperience: React.FC = () => {
       {/* Device */}
       <div className="flex-shrink-0">
         <DeviceFrame>
-          {/* Persistent chat layer - always mounted once onboarding is done */}
           {chatMounted && (
             <div className="absolute inset-0" style={{ visibility: overlay ? "hidden" : "visible" }}>
               <ChatScreen
@@ -120,11 +128,16 @@ const DeviceExperience: React.FC = () => {
                 systemPrompt={config.buildCombinedPrompt(userName)}
                 onUsage={config.recordUsage}
                 onResponseComplete={(msgs) => config.extractMemories(msgs, userName)}
+                storyState={story.storyState}
+                storyArcs={story.storyArcs}
+                safetyGateEnabled={config.safetyGateEnabled}
+                intentClassificationEnabled={config.intentClassificationEnabled}
+                safetyDeflections={config.safetyDeflections}
+                onOrchestratorMeta={handleOrchestratorMeta}
               />
             </div>
           )}
 
-          {/* Onboarding - only shown before first chat */}
           <AnimatePresence mode="wait">
             {screen === "onboarding" && !chatMounted && (
               <motion.div
@@ -140,7 +153,6 @@ const DeviceExperience: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {/* Overlay: multiplayer screens */}
           <AnimatePresence>
             {twoPlayerActive && (
               <motion.div
@@ -170,7 +182,6 @@ const DeviceExperience: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {/* Sleep overlay */}
           <AnimatePresence>
             {sleeping && (
               <motion.div
@@ -264,6 +275,27 @@ const DeviceExperience: React.FC = () => {
           config.extractMemories(apiMsgs, userName);
         }}
         onClearMemories={config.clearMemories}
+        // Story
+        storyState={story.storyState}
+        storyArcs={story.storyArcs}
+        onAdvanceBeat={story.advanceBeat}
+        onRewindBeat={story.rewindBeat}
+        onResetArc={story.resetArc}
+        onForceHook={story.forceHook}
+        onCompleteArc={story.completeArc}
+        onUpdateArc={story.updateArc}
+        onAddArc={story.addArc}
+        onDeleteArc={story.deleteArc}
+        onImportArc={story.importArc}
+        onExportArc={story.exportArc}
+        // Orchestrator
+        orchestratorLog={orchestratorLog}
+        safetyGateEnabled={config.safetyGateEnabled}
+        onSafetyGateToggle={config.setSafetyGateEnabled}
+        intentClassificationEnabled={config.intentClassificationEnabled}
+        onIntentClassificationToggle={config.setIntentClassificationEnabled}
+        safetyDeflections={config.safetyDeflections}
+        onSafetyDeflectionsChange={config.setSafetyDeflections}
       />
     </div>
   );
