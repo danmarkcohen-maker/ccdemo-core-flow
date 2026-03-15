@@ -457,9 +457,26 @@ serve(async (req) => {
     }
 
     // ── Stage 2: Intent Classification ──
+    // Extract story context for the classifier
+    let classifierStoryContext: StoryContext | undefined;
+    if (storyState && storyArcs && storyArcs.length > 0 && storyState.active_arc_id) {
+      const activeArc = storyArcs.find((a: StoryArc) => a.id === storyState.active_arc_id);
+      if (activeArc) {
+        const currentBeat = activeArc.beats[storyState.current_beat_index];
+        // Find the last used hook (most recently attempted)
+        const usedHooks = currentBeat?.hooks?.filter((h: StoryHook) => h.used) || [];
+        const lastHook = usedHooks.length > 0 ? usedHooks[usedHooks.length - 1] : null;
+        classifierStoryContext = {
+          currentBeatTitle: currentBeat?.title,
+          lastHookText: lastHook?.text,
+          knownClues: storyState.known_clues,
+        };
+      }
+    }
+
     let intent = DEFAULT_INTENT;
     if (intentClassificationEnabled && userText) {
-      intent = await classifyIntent(messages, LOVABLE_API_KEY);
+      intent = await classifyIntent(messages, LOVABLE_API_KEY, classifierStoryContext);
       contextSections.push("intent");
     }
 
