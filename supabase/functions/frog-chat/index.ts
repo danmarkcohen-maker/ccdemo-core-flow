@@ -571,15 +571,58 @@ serve(async (req) => {
       },
     };
 
+    // Response validation patterns
+    const CHARACTER_BREAK_PATTERNS = [
+      /\bAs an AI\b/i,
+      /\bI'm a language model\b/i,
+      /\bI cannot\b/i,
+      /\bI don't have feelings\b/i,
+      /\bI'm just a (program|model|bot|computer)\b/i,
+      /\bI apologize,? but\b/i,
+      /\bAs a (large )?language model\b/i,
+    ];
+
+    let responseBuffer = "";
+
     const body = new ReadableStream({
       async start(controller) {
         try {
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
+            // Forward chunk to client
             controller.enqueue(value);
+            // Accumulate text for validation
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n");
+            for (const line of lines) {
+              if (line.startsWith("data: ") && !line.includes("[DONE]")) {
+                try {
+                  const parsed = JSON.parse(line.slice(6));
+                  const delta = parsed.choices?.[0]?.delta?.content;
+                  if (delta) responseBuffer += delta;
+                } catch { /* not valid JSON, skip */ }
+              }
+            }
           }
-          // After stream completes, append orchestrator metadata
+
+          // ── Stage 5b: Post-Response Validation ──
+          const validationFlags: string[] = [];
+          const wordCount = responseBuffer.trim().split(/\s+/).length;
+          if (wordCount > 200) validationFlags.push("too_long");
+          for (const pat of CHARACTER_BREAK_PATTERNS) {
+            if (pat.test(responseBuffer)) { validationFlags.push("character_break"); break; }
+          }
+          for (const pat of UNSAFE_PATTERNS) {
+            if (pat.test(responseBuffer)) { validationFlags.push("unsafe_content"); break; }
+          }
+
+          (orchestratorMeta.orchestrator as Record<string, unknown>).response_validation = {
+            passed: validationFlags.length === 0,
+            flags: validationFlags,
+          };
+
+          // Append orchestrator metadata
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify(orchestratorMeta)}\n\n`)
           );

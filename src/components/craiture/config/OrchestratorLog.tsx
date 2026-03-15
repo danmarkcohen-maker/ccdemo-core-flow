@@ -84,6 +84,25 @@ const OrchestratorLog: React.FC<OrchestratorLogProps> = ({ entries }) => {
               {entry.memory_updated && <span>📝 memory</span>}
             </div>
 
+            {/* Response validation */}
+            {entry.response_validation && !entry.response_validation.passed && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[9px] text-amber-400/80">⚠️ response:</span>
+                {entry.response_validation.flags.map((flag) => (
+                  <span
+                    key={flag}
+                    className="text-[8px] px-1.5 py-0.5 rounded-full font-medium"
+                    style={{
+                      background: flag === "unsafe_content" ? "hsla(0, 70%, 50%, 0.2)" : "hsla(40, 70%, 50%, 0.2)",
+                      color: flag === "unsafe_content" ? "hsla(0, 70%, 65%, 1)" : "hsla(40, 70%, 65%, 1)",
+                    }}
+                  >
+                    {flag}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Context sections */}
             <div className="flex flex-wrap gap-1">
               {entry.context_sections_used.map((section) => (
