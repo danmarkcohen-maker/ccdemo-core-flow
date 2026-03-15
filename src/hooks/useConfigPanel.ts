@@ -173,6 +173,17 @@ export function useConfigPanel() {
   });
   const [isExtracting, setIsExtracting] = useState(false);
 
+  // Orchestrator settings
+  const [safetyGateEnabled, setSafetyGateEnabled] = useState(() => {
+    try { return localStorage.getItem(STORAGE_KEY_SAFETY_GATE) !== "false"; } catch { return true; }
+  });
+  const [intentClassificationEnabled, setIntentClassificationEnabled] = useState(() => {
+    try { return localStorage.getItem(STORAGE_KEY_INTENT_CLASS) !== "false"; } catch { return true; }
+  });
+  const [safetyDeflections, setSafetyDeflections] = useState(() =>
+    localStorage.getItem(STORAGE_KEY_DEFLECTIONS) || DEFAULT_DEFLECTIONS
+  );
+
   const prevHashRef = useRef(sessionStats.promptHash);
 
   // Keyboard shortcut
