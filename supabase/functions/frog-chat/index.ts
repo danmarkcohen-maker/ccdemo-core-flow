@@ -100,12 +100,31 @@ const DEFAULT_INTENT: IntentResult = {
   memory_text: "",
 };
 
+interface StoryContext {
+  currentBeatTitle?: string;
+  lastHookText?: string;
+  knownClues?: string[];
+}
+
 async function classifyIntent(
   messages: Array<{ role: string; content: string }>,
-  apiKey: string
+  apiKey: string,
+  storyContext?: StoryContext
 ): Promise<IntentResult> {
   try {
     const recent = messages.slice(-4);
+
+    let storyBlock = "";
+    if (storyContext?.currentBeatTitle || storyContext?.lastHookText) {
+      storyBlock = `\n\n## Active Story Context
+Current story beat: "${storyContext.currentBeatTitle || "none"}"
+Last story hook the creature mentioned: "${storyContext.lastHookText || "none"}"
+The child already knows these clues: [${(storyContext.knownClues || []).join(", ")}]
+
+Use this context to determine story_engagement accurately.
+Only classify as "curious" or "actively_exploring" if the child is responding to the story hook above, not just asking about something unrelated.`;
+    }
+
     const resp = await fetch(GATEWAY_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -120,7 +139,7 @@ Return JSON with these fields:
 - emotional_tone: "happy" | "sad" | "anxious" | "excited" | "neutral" | "frustrated" | "silly"
 - story_engagement: "none" | "acknowledged" | "curious" | "actively_exploring"
 - memory_candidate: true/false (is there something worth remembering?)
-- memory_text: string (what to remember, empty if nothing)`,
+- memory_text: string (what to remember, empty if nothing)${storyBlock}`,
           },
           {
             role: "user",
