@@ -45,6 +45,14 @@ const STORAGE_KEY_RULES = "craiture_rules";
 const STORAGE_KEY_STATS = "craiture_all_time_stats";
 const STORAGE_KEY_MEMORIES = "craiture_memories";
 const STORAGE_KEY_AGE = "craiture_child_age";
+const STORAGE_KEY_SAFETY_GATE = "craiture_safety_gate";
+const STORAGE_KEY_INTENT_CLASS = "craiture_intent_classification";
+const STORAGE_KEY_DEFLECTIONS = "craiture_safety_deflections";
+
+const DEFAULT_DEFLECTIONS = `Hmm, my brain went all foggy for a second there. What were we talking about? 🐸
+Ribbit! I got distracted by a fly. What were you saying? 🐸
+Whoa, I think I glitched for a sec. Anyway! What's up? 🐸
+My lily pad just wobbled and I lost my train of thought. Where were we? 🐸`;
 
 export interface MessageStat {
   timestamp: number;
@@ -164,6 +172,17 @@ export function useConfigPanel() {
     }
   });
   const [isExtracting, setIsExtracting] = useState(false);
+
+  // Orchestrator settings
+  const [safetyGateEnabled, setSafetyGateEnabled] = useState(() => {
+    try { return localStorage.getItem(STORAGE_KEY_SAFETY_GATE) !== "false"; } catch { return true; }
+  });
+  const [intentClassificationEnabled, setIntentClassificationEnabled] = useState(() => {
+    try { return localStorage.getItem(STORAGE_KEY_INTENT_CLASS) !== "false"; } catch { return true; }
+  });
+  const [safetyDeflections, setSafetyDeflections] = useState(() =>
+    localStorage.getItem(STORAGE_KEY_DEFLECTIONS) || DEFAULT_DEFLECTIONS
+  );
 
   const prevHashRef = useRef(sessionStats.promptHash);
 
@@ -343,6 +362,17 @@ export function useConfigPanel() {
     setRules(getDefaultRules(10));
   }, []);
 
+  // Persist orchestrator settings
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_SAFETY_GATE, String(safetyGateEnabled));
+  }, [safetyGateEnabled]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_INTENT_CLASS, String(intentClassificationEnabled));
+  }, [intentClassificationEnabled]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_DEFLECTIONS, safetyDeflections);
+  }, [safetyDeflections]);
+
   return {
     isOpen,
     setIsOpen,
@@ -365,5 +395,12 @@ export function useConfigPanel() {
     hardReset,
     DEFAULT_SYSTEM_PROMPT: getDefaultSystemPrompt(childAge || 10),
     DEFAULT_RULES: getDefaultRules(childAge || 10),
+    // Orchestrator settings
+    safetyGateEnabled,
+    setSafetyGateEnabled,
+    intentClassificationEnabled,
+    setIntentClassificationEnabled,
+    safetyDeflections,
+    setSafetyDeflections,
   };
 }
