@@ -136,6 +136,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
     await streamFrogChat({
       messages: apiMessages,
       systemPrompt,
+      storyState,
+      storyArcs,
+      safetyGateEnabled,
+      intentClassificationEnabled,
+      safetyDeflections,
+      onOrchestratorMeta,
       onUsage: (u) => { usageData = u; },
       onDelta: (chunk) => {
         if (firstDelta) {
