@@ -1,11 +1,15 @@
 import React, { useState, useMemo } from "react";
 import type { ChatMessage } from "@/components/craiture/screens/ChatScreen";
 import type { SessionStats, AllTimeStats, ExtractedMemories } from "@/hooks/useConfigPanel";
+import type { StoryState, StoryArc, OrchestratorMeta } from "@/lib/storyTypes";
 import { X, RefreshCw } from "lucide-react";
+import StoryStateDisplay from "@/components/craiture/config/StoryStateDisplay";
+import StoryArcEditor from "@/components/craiture/config/StoryArcEditor";
+import OrchestratorLog from "@/components/craiture/config/OrchestratorLog";
 
 const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
 
-type Tab = "prompt" | "memory" | "stats";
+type Tab = "prompt" | "memory" | "stats" | "story" | "orchestrator";
 
 interface ConfigPanelProps {
   isOpen: boolean;
@@ -25,6 +29,27 @@ interface ConfigPanelProps {
   isExtracting: boolean;
   onReExtract: () => void;
   onClearMemories: () => void;
+  // Story props
+  storyState: StoryState;
+  storyArcs: StoryArc[];
+  onAdvanceBeat: () => void;
+  onRewindBeat: () => void;
+  onResetArc: () => void;
+  onForceHook: () => void;
+  onCompleteArc: () => void;
+  onUpdateArc: (arc: StoryArc) => void;
+  onAddArc: (arc: StoryArc) => void;
+  onDeleteArc: (id: string) => void;
+  onImportArc: (json: string) => boolean;
+  onExportArc: (id: string) => string | null;
+  // Orchestrator props
+  orchestratorLog: OrchestratorMeta[];
+  safetyGateEnabled: boolean;
+  onSafetyGateToggle: (v: boolean) => void;
+  intentClassificationEnabled: boolean;
+  onIntentClassificationToggle: (v: boolean) => void;
+  safetyDeflections: string;
+  onSafetyDeflectionsChange: (v: string) => void;
 }
 
 // Cost estimates (Gemini Flash approximate pricing)
@@ -40,7 +65,6 @@ function estimateCost(promptTokens: number, completionTokens: number): string {
 }
 
 function estimateMemoryCost(totalTokens: number): string {
-  // Rough split: ~80% input, ~20% output for extraction
   const input = totalTokens * 0.8;
   const output = totalTokens * 0.2;
   const cost = (input / 1_000_000) * COST_PER_M_INPUT_LITE + (output / 1_000_000) * COST_PER_M_OUTPUT_LITE;
@@ -65,6 +89,25 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
   isExtracting,
   onReExtract,
   onClearMemories,
+  storyState,
+  storyArcs,
+  onAdvanceBeat,
+  onRewindBeat,
+  onResetArc,
+  onForceHook,
+  onCompleteArc,
+  onUpdateArc,
+  onAddArc,
+  onDeleteArc,
+  onImportArc,
+  onExportArc,
+  orchestratorLog,
+  safetyGateEnabled,
+  onSafetyGateToggle,
+  intentClassificationEnabled,
+  onIntentClassificationToggle,
+  safetyDeflections,
+  onSafetyDeflectionsChange,
 }) => {
   const [tab, setTab] = useState<Tab>("prompt");
 
@@ -90,7 +133,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     };
   }, [sessionStats]);
 
-  // Conversation topics (simple word extraction, filtered)
   const topics = useMemo(() => {
     const topicWords = new Set<string>();
     const stopWords = new Set(["the", "a", "an", "is", "it", "i", "you", "we", "they", "my", "your", "do", "does", "did", "have", "has", "had", "was", "were", "be", "been", "am", "are", "what", "how", "why", "when", "where", "who", "that", "this", "and", "or", "but", "so", "if", "to", "of", "in", "on", "at", "for", "with", "about", "from", "up", "out", "not", "no", "yes", "can", "will", "would", "could", "should", "just", "like", "think", "know", "really", "very", "too", "also", "don't", "dont", "it's", "its", "i'm", "im", "kind", "actually", "pretty", "much", "want", "going", "thing", "things", "well", "yeah", "okay", "sure", "right", "good", "nice", "cool", "great", "some", "more", "then", "than", "them", "here", "there", "been", "being", "into", "over", "only", "come", "came", "make", "made", "take", "took", "tell", "told", "said", "says", "goes", "went", "back", "still", "even", "ever", "never", "always"]);
@@ -112,6 +154,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
     { id: "prompt", label: "Prompt" },
     { id: "memory", label: "Memory" },
     { id: "stats", label: "Stats" },
+    { id: "story", label: "Story" },
+    { id: "orchestrator", label: "Orch" },
   ];
 
   const memoryCategories: { label: string; items: string[]; color: string }[] = [
@@ -186,6 +230,43 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
                 spellCheck={false}
               />
             </div>
+
+            {/* Orchestrator settings in Prompt tab */}
+            <div className="border-t border-border/20 pt-4">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 block">
+                Orchestrator Settings
+              </label>
+              <div className="space-y-3">
+                <label className="flex items-center justify-between">
+                  <span className="text-[10px] text-foreground/70">Safety Gate</span>
+                  <input
+                    type="checkbox"
+                    checked={safetyGateEnabled}
+                    onChange={(e) => onSafetyGateToggle(e.target.checked)}
+                    className="accent-[hsl(var(--creature-frog-glow))]"
+                  />
+                </label>
+                <label className="flex items-center justify-between">
+                  <span className="text-[10px] text-foreground/70">Intent Classification</span>
+                  <input
+                    type="checkbox"
+                    checked={intentClassificationEnabled}
+                    onChange={(e) => onIntentClassificationToggle(e.target.checked)}
+                    className="accent-[hsl(var(--creature-frog-glow))]"
+                  />
+                </label>
+                <div>
+                  <label className="text-[10px] text-muted-foreground/50 block mb-1">Safety Deflections (one per line)</label>
+                  <textarea
+                    value={safetyDeflections}
+                    onChange={(e) => onSafetyDeflectionsChange(e.target.value)}
+                    className="w-full h-20 rounded-lg border border-border/30 bg-card/50 px-3 py-2 text-[10px] text-foreground/70 resize-y focus:outline-none focus:border-[hsl(var(--creature-frog-glow))]"
+                    placeholder="Hmm, my brain went all foggy for a second there. What were we talking about? 🐸"
+                  />
+                </div>
+              </div>
+            </div>
+
             <p className="text-[10px] text-muted-foreground/40 leading-relaxed">
               Changes apply on next message. System prompt + rules + memories are combined and sent to the model.
               Changing prompt/rules starts a new stats session for A/B comparison.
@@ -278,6 +359,30 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               ))}
             </div>
 
+            {/* Story Discoveries */}
+            {storyState.known_clues.length > 0 && (
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: "hsl(35, 60%, 60%)" }}>
+                  Story Discoveries
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {storyState.known_clues.map((clue, i) => (
+                    <span
+                      key={i}
+                      className="text-[10px] px-2 py-1 rounded-full border text-foreground/70"
+                      style={{
+                        borderColor: "hsla(35, 60%, 50%, 0.3)",
+                        background: "hsla(35, 60%, 50%, 0.12)",
+                        color: "hsl(35, 60%, 65%)",
+                      }}
+                    >
+                      {clue}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Conversation topics word cloud */}
             <div className="mt-4">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -326,7 +431,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
                 <p className="text-xs text-muted-foreground/40 text-center py-4">No messages in this session yet</p>
               )}
 
-              {/* Response length sparkline */}
               {sessionMetrics && sessionMetrics.responseLengths.length > 1 && (
                 <div className="mt-3">
                   <label className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">
@@ -355,7 +459,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               )}
             </div>
 
-            {/* Divider */}
             <div className="border-t border-border/20" />
 
             {/* All-time stats */}
@@ -384,7 +487,6 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               </div>
             </div>
 
-            {/* Memory extraction stats */}
             {allTimeStats.memoryExtractionCalls > 0 && (
               <>
                 <div className="border-t border-border/20" />
@@ -401,6 +503,38 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({
               </>
             )}
           </>
+        )}
+
+        {tab === "story" && (
+          <>
+            <StoryStateDisplay
+              storyState={storyState}
+              storyArcs={storyArcs}
+              onAdvanceBeat={onAdvanceBeat}
+              onRewindBeat={onRewindBeat}
+              onResetArc={onResetArc}
+              onForceHook={onForceHook}
+              onCompleteArc={onCompleteArc}
+            />
+
+            <div className="border-t border-border/20 pt-4">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 block">
+                Arc Editor
+              </label>
+              <StoryArcEditor
+                storyArcs={storyArcs}
+                onUpdateArc={onUpdateArc}
+                onAddArc={onAddArc}
+                onDeleteArc={onDeleteArc}
+                onImportArc={onImportArc}
+                onExportArc={onExportArc}
+              />
+            </div>
+          </>
+        )}
+
+        {tab === "orchestrator" && (
+          <OrchestratorLog entries={orchestratorLog} />
         )}
       </div>
 
