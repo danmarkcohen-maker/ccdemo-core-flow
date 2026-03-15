@@ -100,12 +100,31 @@ const DEFAULT_INTENT: IntentResult = {
   memory_text: "",
 };
 
+interface StoryContext {
+  currentBeatTitle?: string;
+  lastHookText?: string;
+  knownClues?: string[];
+}
+
 async function classifyIntent(
   messages: Array<{ role: string; content: string }>,
-  apiKey: string
+  apiKey: string,
+  storyContext?: StoryContext
 ): Promise<IntentResult> {
   try {
     const recent = messages.slice(-4);
+
+    let storyBlock = "";
+    if (storyContext?.currentBeatTitle || storyContext?.lastHookText) {
+      storyBlock = `\n\n## Active Story Context
+Current story beat: "${storyContext.currentBeatTitle || "none"}"
+Last story hook the creature mentioned: "${storyContext.lastHookText || "none"}"
+The child already knows these clues: [${(storyContext.knownClues || []).join(", ")}]
+
+Use this context to determine story_engagement accurately.
+Only classify as "curious" or "actively_exploring" if the child is responding to the story hook above, not just asking about something unrelated.`;
+    }
+
     const resp = await fetch(GATEWAY_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -120,7 +139,7 @@ Return JSON with these fields:
 - emotional_tone: "happy" | "sad" | "anxious" | "excited" | "neutral" | "frustrated" | "silly"
 - story_engagement: "none" | "acknowledged" | "curious" | "actively_exploring"
 - memory_candidate: true/false (is there something worth remembering?)
-- memory_text: string (what to remember, empty if nothing)`,
+- memory_text: string (what to remember, empty if nothing)${storyBlock}`,
           },
           {
             role: "user",
@@ -438,9 +457,26 @@ serve(async (req) => {
     }
 
     // ── Stage 2: Intent Classification ──
+    // Extract story context for the classifier
+    let classifierStoryContext: StoryContext | undefined;
+    if (storyState && storyArcs && storyArcs.length > 0 && storyState.active_arc_id) {
+      const activeArc = storyArcs.find((a: StoryArc) => a.id === storyState.active_arc_id);
+      if (activeArc) {
+        const currentBeat = activeArc.beats[storyState.current_beat_index];
+        // Find the last used hook (most recently attempted)
+        const usedHooks = currentBeat?.hooks?.filter((h: StoryHook) => h.used) || [];
+        const lastHook = usedHooks.length > 0 ? usedHooks[usedHooks.length - 1] : null;
+        classifierStoryContext = {
+          currentBeatTitle: currentBeat?.title,
+          lastHookText: lastHook?.text,
+          knownClues: storyState.known_clues,
+        };
+      }
+    }
+
     let intent = DEFAULT_INTENT;
     if (intentClassificationEnabled && userText) {
-      intent = await classifyIntent(messages, LOVABLE_API_KEY);
+      intent = await classifyIntent(messages, LOVABLE_API_KEY, classifierStoryContext);
       contextSections.push("intent");
     }
 
@@ -535,15 +571,58 @@ serve(async (req) => {
       },
     };
 
+    // Response validation patterns
+    const CHARACTER_BREAK_PATTERNS = [
+      /\bAs an AI\b/i,
+      /\bI'm a language model\b/i,
+      /\bI cannot\b/i,
+      /\bI don't have feelings\b/i,
+      /\bI'm just a (program|model|bot|computer)\b/i,
+      /\bI apologize,? but\b/i,
+      /\bAs a (large )?language model\b/i,
+    ];
+
+    let responseBuffer = "";
+
     const body = new ReadableStream({
       async start(controller) {
         try {
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
+            // Forward chunk to client
             controller.enqueue(value);
+            // Accumulate text for validation
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n");
+            for (const line of lines) {
+              if (line.startsWith("data: ") && !line.includes("[DONE]")) {
+                try {
+                  const parsed = JSON.parse(line.slice(6));
+                  const delta = parsed.choices?.[0]?.delta?.content;
+                  if (delta) responseBuffer += delta;
+                } catch { /* not valid JSON, skip */ }
+              }
+            }
           }
-          // After stream completes, append orchestrator metadata
+
+          // ── Stage 5b: Post-Response Validation ──
+          const validationFlags: string[] = [];
+          const wordCount = responseBuffer.trim().split(/\s+/).length;
+          if (wordCount > 200) validationFlags.push("too_long");
+          for (const pat of CHARACTER_BREAK_PATTERNS) {
+            if (pat.test(responseBuffer)) { validationFlags.push("character_break"); break; }
+          }
+          for (const pat of UNSAFE_PATTERNS) {
+            if (pat.test(responseBuffer)) { validationFlags.push("unsafe_content"); break; }
+          }
+
+          (orchestratorMeta.orchestrator as Record<string, unknown>).response_validation = {
+            passed: validationFlags.length === 0,
+            flags: validationFlags,
+          };
+
+          // Append orchestrator metadata
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify(orchestratorMeta)}\n\n`)
           );

@@ -55,6 +55,11 @@ export interface StoryState {
   force_hook_next: boolean;
 }
 
+export interface ResponseValidation {
+  passed: boolean;
+  flags: string[];
+}
+
 export interface OrchestratorMeta {
   intent: string;
   emotional_tone: string;
@@ -65,6 +70,7 @@ export interface OrchestratorMeta {
   memory_updated: boolean;
   context_sections_used: string[];
   updated_story_state?: StoryState;
+  response_validation?: ResponseValidation;
 }
 
 export const EMPTY_STORY_STATE: StoryState = {
