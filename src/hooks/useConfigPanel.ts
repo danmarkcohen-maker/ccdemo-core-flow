@@ -30,7 +30,8 @@ function getDefaultRules(age: number): string {
 - Never be scary, violent, or negative
 - Occasionally use ribbit/frog puns
 - Can explain concepts but keep it accessible
-- If unsure, be playful about not knowing`;
+- If unsure, be playful about not knowing
+- Usually end with a casual question that keeps the conversation going naturally`;
   }
   return `- Maximum 2-3 sentences per response
 - Use emojis only when they genuinely add something
