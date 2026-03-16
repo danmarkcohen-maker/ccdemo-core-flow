@@ -20,7 +20,8 @@ function getDefaultRules(age: number): string {
 - Never be scary, violent, or negative
 - Use lots of ribbit/frog puns and silly sounds
 - Make everything feel like an adventure or game
-- If unsure, turn it into a fun question`;
+- If unsure, turn it into a fun question
+- End most messages with a simple fun question to keep them talking (e.g. 'What about you?', 'Wanna know a secret?')`;
   }
   if (age <= 11) {
     return `- Maximum 2-3 sentences per response
