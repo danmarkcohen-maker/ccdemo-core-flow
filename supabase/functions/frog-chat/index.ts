@@ -181,6 +181,7 @@ function assembleContext(
     activeThreads?: string;
     relationshipLedger?: string;
     dailyLifePrompt?: string;
+    childProfile?: string;
     enabledSections?: string[];
     maxContextTokens?: number;
   },
