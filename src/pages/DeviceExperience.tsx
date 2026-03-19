@@ -10,13 +10,15 @@ import type { FourPlayerHandle } from "@/components/craiture/screens/FourPlayerS
 import ConfigPanel from "@/components/craiture/ConfigPanel";
 import { useConfigPanel } from "@/hooks/useConfigPanel";
 import { useCreatureConfig } from "@/hooks/useCreatureConfig";
-import type { OrchestratorMeta } from "@/hooks/useCreatureConfig";
+import type { OrchestratorMeta, LifeThread, ReflectionOutput } from "@/hooks/useCreatureConfig";
 import { motion, AnimatePresence } from "framer-motion";
 
 type Screen = "onboarding" | "chat";
 type Overlay = null | "two-player" | "four-player";
 
 const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
+
+const PROFILE_UPDATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-profile`;
 
 const postPlaydateMessages = [
   "That was fun! Now, where were we? 🐸",
@@ -43,8 +45,7 @@ const DeviceExperience: React.FC = () => {
   const [chatMounted, setChatMounted] = useState(false);
   const config = useConfigPanel();
   const creatureConfig = useCreatureConfig();
-
-  // No longer advance threads on mount — reflection system handles this
+  const responseCountRef = useRef(0);
 
   const handleOnboardingComplete = useCallback((name: string, age: number, topics?: string[]) => {
     setUserName(name);
@@ -55,7 +56,8 @@ const DeviceExperience: React.FC = () => {
     setChatMessages([]);
     setScreen("chat");
     setChatMounted(true);
-  }, [config]);
+    creatureConfig.incrementSessionCount();
+  }, [config, creatureConfig]);
 
   const handleRestart = () => {
     setOverlay(null);
@@ -76,6 +78,7 @@ const DeviceExperience: React.FC = () => {
     setScreen("onboarding");
     setChatMounted(false);
     setChatMessages([]);
+    responseCountRef.current = 0;
     setKey((k) => k + 1);
   };
 
@@ -104,6 +107,67 @@ const DeviceExperience: React.FC = () => {
     creatureConfig.logOrchestratorMeta(meta);
   }, [creatureConfig]);
 
+  // Handle reflection completion — apply thread updates
+  const handleReflectionComplete = useCallback((reflection: ReflectionOutput | null, updatedThreads: LifeThread[] | null) => {
+    if (reflection) {
+      creatureConfig.setLastReflection(reflection);
+    }
+    if (updatedThreads) {
+      creatureConfig.setThreads(updatedThreads);
+    }
+  }, [creatureConfig]);
+
+  // Handle message sent — update session timestamp
+  const handleMessageSent = useCallback(() => {
+    creatureConfig.updateLastSessionTimestamp();
+  }, [creatureConfig]);
+
+  // Handle profile update after response
+  const handleResponseComplete = useCallback(async (msgs: { role: "user" | "assistant"; content: string }[]) => {
+    responseCountRef.current += 1;
+
+    const freq = creatureConfig.orchestrator.profileUpdateFrequency;
+    const shouldUpdate =
+      freq === "every" ||
+      (freq === "every3" && responseCountRef.current % 3 === 0);
+
+    if (!shouldUpdate) return;
+
+    try {
+      const resp = await fetch(PROFILE_UPDATE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          currentProfile: creatureConfig.creature.childProfile,
+          currentLedger: creatureConfig.creature.relationshipLedger,
+          conversation: msgs,
+          knownName: userName,
+        }),
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.updatedProfile) creatureConfig.setChildProfile(data.updatedProfile);
+        if (data.updatedLedger) creatureConfig.setRelationshipLedger(data.updatedLedger);
+        if (data.sessionSummary) creatureConfig.setLastSessionSummary(data.sessionSummary);
+
+        // Track usage
+        if (data.usage) {
+          config.recordUsage(0, 0, {
+            prompt_tokens: data.usage.prompt_tokens || 0,
+            completion_tokens: data.usage.completion_tokens || 0,
+            total_tokens: data.usage.total_tokens || 0,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Profile update error:", e);
+    }
+  }, [creatureConfig, userName, config]);
+
   const twoPlayerRef = useRef<TwoPlayerHandle>(null);
   const fourPlayerRef = useRef<FourPlayerHandle>(null);
 
@@ -122,6 +186,11 @@ const DeviceExperience: React.FC = () => {
     }
   }, [creatureConfig]);
 
+  // Build reflection payload for ChatScreen
+  const reflectionPayload = creatureConfig.buildReflectionPayload();
+  const isNewSession = creatureConfig.isNewSession();
+  const isFirstEver = creatureConfig.sessionState.sessionCount === 0;
+
   return (
     <div className="flex items-center justify-center min-h-screen gap-12 overflow-hidden" style={{ background: "hsl(220, 15%, 6%)" }}>
       {/* Device */}
@@ -134,12 +203,16 @@ const DeviceExperience: React.FC = () => {
                 userName={userName}
                 messages={chatMessages}
                 onMessagesChange={setChatMessages}
-                resumeMode={chatMessages.length > 0}
+                resumeMode={chatMessages.length > 0 && !isNewSession}
                 systemPrompt={config.buildCombinedPrompt(userName)}
                 orchestratorConfig={creatureConfig.buildOrchestratorPayload()}
                 onUsage={config.recordUsage}
-                onResponseComplete={(msgs) => config.extractMemories(msgs, userName)}
+                onResponseComplete={handleResponseComplete}
                 onOrchestratorMeta={handleOrchestratorMeta}
+                reflectionPayload={isNewSession || isFirstEver ? reflectionPayload : null}
+                isFirstEver={isFirstEver}
+                onReflectionComplete={handleReflectionComplete}
+                onMessageSent={handleMessageSent}
               />
             </div>
           )}
@@ -262,11 +335,12 @@ const DeviceExperience: React.FC = () => {
         memories={config.memories}
         isExtracting={config.isExtracting}
         onReExtract={() => {
+          // Trigger profile update instead of old extraction
           const apiMsgs = chatMessages.map(m => ({
             role: m.isUser ? "user" as const : "assistant" as const,
             content: m.message,
           }));
-          config.extractMemories(apiMsgs, userName);
+          handleResponseComplete(apiMsgs);
         }}
         onClearMemories={config.clearMemories}
         // Creature props
@@ -276,6 +350,7 @@ const DeviceExperience: React.FC = () => {
         onThreadsChange={handleThreadsChange}
         onDailyLifeChange={creatureConfig.setDailyLifePrompt}
         onLedgerChange={creatureConfig.setRelationshipLedger}
+        onChildProfileChange={creatureConfig.setChildProfile}
         onAddThread={creatureConfig.addThread}
         onAdvanceAll={creatureConfig.advanceAllNow}
         onResetCreature={creatureConfig.resetCreatureToDefaults}
@@ -290,6 +365,9 @@ const DeviceExperience: React.FC = () => {
         orchestratorLog={creatureConfig.orchestratorLog}
         allSections={creatureConfig.ALL_SECTIONS}
         defaultDeflections={creatureConfig.DEFAULT_DEFLECTIONS}
+        // Reflection debug
+        lastReflection={creatureConfig.lastReflection}
+        lastSessionSummary={creatureConfig.creature.lastSessionSummary}
       />
     </div>
   );
