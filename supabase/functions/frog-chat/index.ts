@@ -280,11 +280,10 @@ interface LifeThread {
   id: string;
   title: string;
   current_state: string;
-  next_development: string;
-  days_until_next: number;
-  last_updated: string;
+  developments: string[];
   child_involved: boolean;
   child_advice: string | null;
+  resolved: boolean;
 }
 
 // ─── Stage 5: Post-Response Validation ───────────────────────────────
