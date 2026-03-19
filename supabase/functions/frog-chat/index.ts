@@ -219,10 +219,11 @@ function assembleContext(
     try {
       const threads = JSON.parse(config.activeThreads) as LifeThread[];
       if (threads.length > 0) {
-        const threadText = threads.map(t =>
+        const activeThreads = threads.filter((t: any) => !t.resolved);
+        const threadText = activeThreads.map(t =>
           `**${t.title}**: ${t.current_state}${t.child_involved && t.child_advice ? ` (Your friend suggested: "${t.child_advice}")` : ""}`
         ).join("\n");
-        sections.push({ key: "threads", header: "## Your Life Right Now", content: threadText });
+        if (threadText) sections.push({ key: "threads", header: "## Your Life Right Now", content: threadText });
       }
     } catch {}
   }
