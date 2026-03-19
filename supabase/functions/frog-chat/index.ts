@@ -206,7 +206,12 @@ function assembleContext(
 
   // Relationship Ledger
   if (enabled.has("ledger") && config.relationshipLedger) {
-    sections.push({ key: "ledger", header: "## Who You're Talking To", content: config.relationshipLedger });
+    let ledgerContent = config.relationshipLedger;
+    if (config.childProfile) {
+      ledgerContent += "\n\n" + config.childProfile;
+    }
+    sections.push({ key: "ledger", header: "## Who You're Talking To", content: ledgerContent });
+  }
   }
 
   // Active Threads
