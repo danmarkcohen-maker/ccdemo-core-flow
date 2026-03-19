@@ -44,10 +44,7 @@ const DeviceExperience: React.FC = () => {
   const config = useConfigPanel();
   const creatureConfig = useCreatureConfig();
 
-  // Advance threads on mount
-  React.useEffect(() => {
-    creatureConfig.advanceThreads();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // No longer advance threads on mount — reflection system handles this
 
   const handleOnboardingComplete = useCallback((name: string, age: number, topics?: string[]) => {
     setUserName(name);
