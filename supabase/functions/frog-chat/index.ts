@@ -212,7 +212,6 @@ function assembleContext(
     }
     sections.push({ key: "ledger", header: "## Who You're Talking To", content: ledgerContent });
   }
-  }
 
   // Active Threads
   if (enabled.has("threads") && config.activeThreads) {
