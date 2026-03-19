@@ -4,7 +4,7 @@ import ChatBubble from "@/components/craiture/ChatBubble";
 import ThinkingDots from "@/components/craiture/ThinkingDots";
 import ChatInput from "@/components/craiture/ChatInput";
 import { streamFrogChat } from "@/lib/streamFrogChat";
-import type { OrchestratorMeta } from "@/hooks/useCreatureConfig";
+import type { OrchestratorMeta, LifeThread, ReflectionOutput } from "@/hooks/useCreatureConfig";
 import { toast } from "sonner";
 
 export interface ChatMessage {
@@ -25,11 +25,20 @@ interface ChatScreenProps {
   onUsage?: (userMsgLength: number, assistantMsgLength: number, usage?: import("@/lib/streamFrogChat").UsageData) => void;
   onResponseComplete?: (messages: { role: "user" | "assistant"; content: string }[]) => void;
   onOrchestratorMeta?: (meta: OrchestratorMeta) => void;
+  // Reflection system props
+  reflectionPayload?: Record<string, unknown> | null;
+  isFirstEver?: boolean;
+  onReflectionComplete?: (reflection: ReflectionOutput | null, updatedThreads: LifeThread[] | null) => void;
+  onMessageSent?: () => void;
 }
 
-const OPENER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-opener`;
+const REFLECT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reflect-and-open`;
 
-const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesChange, resumeMode = false, systemPrompt, orchestratorConfig, onUsage, onResponseComplete, onOrchestratorMeta }) => {
+const ChatScreen: React.FC<ChatScreenProps> = ({
+  userName, messages, onMessagesChange, resumeMode = false, systemPrompt,
+  orchestratorConfig, onUsage, onResponseComplete, onOrchestratorMeta,
+  reflectionPayload, isFirstEver, onReflectionComplete, onMessageSent,
+}) => {
   const [showThinking, setShowThinking] = useState(false);
   const [speakingCreature, setSpeakingCreature] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -38,7 +47,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
   const [greeted, setGreeted] = useState(resumeMode || messages.length > 0);
   const assistantBufferRef = useRef("");
 
-  // Initial greeting — fetch from LLM
+  // Initial greeting — use reflection system
   useEffect(() => {
     if (greeted) return;
 
@@ -61,20 +70,36 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
       } catch {}
 
       let opener = `Hey ${userName}! What's on your mind? 🐸`;
+      let reflection: ReflectionOutput | null = null;
+      let updatedThreads: LifeThread[] | null = null;
 
       try {
-        const resp = await fetch(OPENER_URL, {
+        const body: Record<string, unknown> = {
+          ...(reflectionPayload || {}),
+          name: userName,
+          age,
+          topics,
+          isFirstEver: isFirstEver ?? true,
+        };
+
+        const resp = await fetch(REFLECT_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ name: userName, age, topics }),
+          body: JSON.stringify(body),
         });
 
         if (resp.ok) {
           const data = await resp.json();
           if (data.opener) opener = data.opener;
+          if (data.reflection) reflection = data.reflection;
+          if (data.updatedThreads) updatedThreads = data.updatedThreads;
+        } else if (resp.status === 429) {
+          toast.error("Rate limit exceeded. Please wait a moment.");
+        } else if (resp.status === 402) {
+          toast.error("Usage limit reached. Please add credits.");
         }
       } catch (e) {
         console.warn("Failed to generate opener, using fallback:", e);
@@ -90,6 +115,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
         streaming: true,
       }]);
       setGreeted(true);
+      onReflectionComplete?.(reflection, updatedThreads);
       setTimeout(() => setSpeakingCreature(false), 2000);
     };
 
@@ -98,7 +124,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
       cancelled = true;
       clearTimeout(t);
     };
-  }, [greeted, userName, onMessagesChange]);
+  }, [greeted, userName, onMessagesChange, reflectionPayload, isFirstEver, onReflectionComplete]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -112,6 +138,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ userName, messages, onMessagesC
     onMessagesChange(updatedMessages);
     setInputValue("");
     setIsStreaming(true);
+
+    // Track session timestamp
+    onMessageSent?.();
 
     setTimeout(() => {
       setShowThinking(true);
