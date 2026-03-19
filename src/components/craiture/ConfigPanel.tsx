@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
 import type { ChatMessage } from "@/components/craiture/screens/ChatScreen";
 import type { SessionStats, AllTimeStats, ExtractedMemories } from "@/hooks/useConfigPanel";
-import type { CreatureConfig, OrchestratorConfig, OrchestratorMeta } from "@/hooks/useCreatureConfig";
-import { X, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
+import type { CreatureConfig, OrchestratorConfig, OrchestratorMeta, ReflectionOutput } from "@/hooks/useCreatureConfig";
+import { X, RefreshCw, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 
 const fontStyle = { fontFamily: "'SF Pro Rounded', -apple-system, sans-serif" };
 
@@ -33,6 +33,7 @@ interface ConfigPanelProps {
   onThreadsChange: (v: string) => void; // JSON string
   onDailyLifeChange: (v: string) => void;
   onLedgerChange: (v: string) => void;
+  onChildProfileChange: (v: string) => void;
   onAddThread: () => void;
   onAdvanceAll: () => void;
   onResetCreature: () => void;
@@ -47,6 +48,9 @@ interface ConfigPanelProps {
   orchestratorLog: OrchestratorMeta[];
   allSections: readonly string[];
   defaultDeflections: string;
+  // Reflection debug
+  lastReflection: ReflectionOutput | null;
+  lastSessionSummary: string;
 }
 
 // Cost estimates
@@ -89,10 +93,11 @@ const ConfigPanel: React.FC<ConfigPanelProps> = (props) => {
     defaultPrompt, defaultRules, chatMessages, sessionStats, allTimeStats,
     onResetAllTime, userName, memories, isExtracting, onReExtract, onClearMemories,
     creature, onPersonalityChange, onBackstoryChange, onThreadsChange,
-    onDailyLifeChange, onLedgerChange, onAddThread, onAdvanceAll, onResetCreature,
+    onDailyLifeChange, onLedgerChange, onChildProfileChange, onAddThread, onAdvanceAll, onResetCreature,
     defaultPersonality, defaultBackstory, defaultDailyLife,
     orchestrator, onOrchestratorChange, onToggleSection, onResetOrchestrator,
     orchestratorLog, allSections, defaultDeflections,
+    lastReflection, lastSessionSummary,
   } = props;
 
   const [tab, setTab] = useState<Tab>("creature");
@@ -138,18 +143,11 @@ const ConfigPanel: React.FC<ConfigPanelProps> = (props) => {
     { id: "stats", label: "Stats" },
   ];
 
-  const memoryCategories: { label: string; items: string[]; color: string }[] = [
-    { label: "Likes", items: memories.likes, color: "hsl(var(--creature-frog-glow))" },
-    { label: "Dislikes", items: memories.dislikes, color: "hsl(0, 60%, 60%)" },
-    { label: "Feelings", items: memories.feelings, color: "hsl(280, 60%, 65%)" },
-    { label: "Topics", items: memories.topics, color: "hsl(200, 60%, 60%)" },
-  ];
-
-  // Thread JSON for editing
-  let threadsJson = "";
+  // Parse threads for structured editing
+  let parsedThreads: any[] = [];
   try {
-    threadsJson = JSON.stringify(creature.threads, null, 2);
-  } catch { threadsJson = "[]"; }
+    parsedThreads = creature.threads || [];
+  } catch { parsedThreads = []; }
 
   return (
     <div
@@ -199,6 +197,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = (props) => {
               rows={10}
               note="Use ## headers to define sections. The orchestrator selects relevant sections based on conversation topics."
             />
+
+            {/* Life Threads — structured editor */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Life Threads</label>
@@ -208,13 +208,29 @@ const ConfigPanel: React.FC<ConfigPanelProps> = (props) => {
                   <button onClick={onResetCreature} className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors">Reset</button>
                 </div>
               </div>
-              <textarea
-                value={threadsJson}
-                onChange={(e) => onThreadsChange(e.target.value)}
-                className="w-full h-48 rounded-lg border border-border/30 bg-card/50 px-3 py-2 text-[10px] text-foreground/90 resize-y focus:outline-none focus:border-[hsl(var(--creature-frog-glow))] transition-colors font-mono"
-                spellCheck={false}
-              />
+              <p className="text-[9px] text-muted-foreground/40 mb-2">
+                Threads advance via the reflection system, not timers. The LLM decides when developments happen.
+              </p>
+
+              <div className="space-y-3">
+                {parsedThreads.map((thread, idx) => (
+                  <ThreadEditor
+                    key={thread.id || idx}
+                    thread={thread}
+                    onChange={(updated) => {
+                      const newThreads = [...parsedThreads];
+                      newThreads[idx] = updated;
+                      onThreadsChange(JSON.stringify(newThreads));
+                    }}
+                    onRemove={() => {
+                      const newThreads = parsedThreads.filter((_, i) => i !== idx);
+                      onThreadsChange(JSON.stringify(newThreads));
+                    }}
+                  />
+                ))}
+              </div>
             </div>
+
             <SectionEditor
               label="Daily Life Prompt"
               value={creature.dailyLifePrompt}
@@ -222,19 +238,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = (props) => {
               onReset={() => onDailyLifeChange(defaultDailyLife)}
               rows={5}
             />
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Relationship Ledger</label>
-                <button onClick={() => onLedgerChange("")} className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors">Clear</button>
-              </div>
-              <textarea
-                value={creature.relationshipLedger}
-                onChange={(e) => onLedgerChange(e.target.value)}
-                placeholder={`Name: ${userName}\nAge: ...\nLikes: ...\nDislikes: ...\nSignificant moments: ...`}
-                className="w-full h-36 rounded-lg border border-border/30 bg-card/50 px-3 py-2 text-xs text-foreground/90 resize-y focus:outline-none focus:border-[hsl(var(--creature-frog-glow))] transition-colors"
-                spellCheck={false}
-              />
-            </div>
+
             {creature.completedThreads.length > 0 && (
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Completed Threads</label>
@@ -292,6 +296,51 @@ const ConfigPanel: React.FC<ConfigPanelProps> = (props) => {
               </div>
             </div>
 
+            {/* Session Settings */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Settings</label>
+              <div className="mt-3 space-y-2.5">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-muted-foreground/70">Session Timeout</span>
+                    <span className="text-[10px] text-foreground/60 font-mono">{orchestrator.sessionTimeoutMinutes} min</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={5}
+                    max={120}
+                    step={5}
+                    value={orchestrator.sessionTimeoutMinutes}
+                    onChange={(e) => onOrchestratorChange({ sessionTimeoutMinutes: parseInt(e.target.value) })}
+                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                    style={{ background: "hsl(230, 14%, 20%)" }}
+                  />
+                  <p className="text-[9px] text-muted-foreground/40 mt-1">Time gap (minutes) before reflection runs on next session start.</p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-muted-foreground/70">Profile Update Frequency</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {(["every", "every3", "manual"] as const).map((freq) => (
+                      <button
+                        key={freq}
+                        onClick={() => onOrchestratorChange({ profileUpdateFrequency: freq })}
+                        className={`text-[10px] px-2.5 py-1 rounded-full border transition-all ${
+                          orchestrator.profileUpdateFrequency === freq
+                            ? "border-[hsl(var(--creature-frog))]/50 bg-[hsl(var(--creature-frog))]/15 text-foreground/80"
+                            : "border-border/20 text-muted-foreground/40"
+                        }`}
+                      >
+                        {freq === "every" ? "Every response" : freq === "every3" ? "Every 3" : "Manual"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Context Sections */}
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Context Sections</label>
@@ -321,6 +370,42 @@ const ConfigPanel: React.FC<ConfigPanelProps> = (props) => {
               rows={4}
               note="One deflection per line. Random selection when safety gate blocks a message."
             />
+
+            {/* Last Reflection */}
+            {lastReflection && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Last Reflection</label>
+                <div className="mt-2 px-3 py-2 rounded-lg border border-border/20 space-y-2" style={{ background: "hsla(230, 14%, 12%, 0.8)" }}>
+                  {lastReflection.follow_up && (
+                    <div>
+                      <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Follow-up</p>
+                      <p className="text-[10px] text-foreground/70">{lastReflection.follow_up}</p>
+                    </div>
+                  )}
+                  {lastReflection.thread_updates && lastReflection.thread_updates.length > 0 && (
+                    <div>
+                      <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Thread Updates</p>
+                      {lastReflection.thread_updates.map((tu, i) => (
+                        <p key={i} className="text-[10px] text-foreground/70">
+                          <span className={tu.advance ? "text-[hsl(var(--creature-frog-glow))]" : "text-muted-foreground/50"}>
+                            {tu.advance ? "✓" : "✗"} {tu.thread_id}
+                          </span>
+                          {tu.reason && <span className="text-muted-foreground/40"> — {tu.reason}</span>}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Mood</p>
+                    <p className="text-[10px] text-foreground/70">{lastReflection.creature_mood}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Opener Hint</p>
+                    <p className="text-[10px] text-foreground/70">{lastReflection.opener_hint}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Last Message Debug */}
             {orchestratorLog.length > 0 && (
@@ -391,63 +476,54 @@ const ConfigPanel: React.FC<ConfigPanelProps> = (props) => {
         {/* ═══ MEMORY TAB ═══ */}
         {tab === "memory" && (
           <>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Known Identity</label>
-              <div className="mt-2 flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[hsl(var(--creature-frog))]/30" style={{ background: "hsla(120, 20%, 15%, 0.4)" }}>
-                <span className="text-[10px] font-bold text-[hsl(var(--creature-frog-glow))] uppercase shrink-0 w-14">Name</span>
-                <span className="text-xs text-foreground/90 font-medium">{userName}</span>
-                <span className="text-[9px] text-muted-foreground/40 ml-auto">from onboarding</span>
-              </div>
-              {memories.age !== null && (
-                <div className="mt-1.5 flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[hsl(var(--creature-frog))]/30" style={{ background: "hsla(120, 20%, 15%, 0.4)" }}>
-                  <span className="text-[10px] font-bold text-[hsl(var(--creature-frog-glow))] uppercase shrink-0 w-14">Age</span>
-                  <span className="text-xs text-foreground/90 font-medium">{memories.age}</span>
-                  <span className="text-[9px] text-muted-foreground/40 ml-auto">extracted</span>
-                </div>
-              )}
-            </div>
-
+            {/* Child Profile — living document */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Extracted Memories</label>
-                <div className="flex items-center gap-2">
-                  <button onClick={onClearMemories} className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors">Clear</button>
-                  <button onClick={onReExtract} disabled={isExtracting} className="flex items-center gap-1 text-[10px] text-[hsl(var(--creature-frog-glow))]/70 hover:text-[hsl(var(--creature-frog-glow))] transition-colors disabled:opacity-40">
-                    <RefreshCw size={10} className={isExtracting ? "animate-spin" : ""} />
-                    {isExtracting ? "Extracting…" : "Re-extract"}
-                  </button>
-                </div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Child Profile</label>
+                <button onClick={onReExtract} disabled={isExtracting} className="flex items-center gap-1 text-[10px] text-[hsl(var(--creature-frog-glow))]/70 hover:text-[hsl(var(--creature-frog-glow))] transition-colors disabled:opacity-40">
+                  <RefreshCw size={10} className={isExtracting ? "animate-spin" : ""} />
+                  {isExtracting ? "Updating…" : "Re-extract from Chat"}
+                </button>
               </div>
-              <p className="text-[10px] text-muted-foreground/40 mb-3">
-                Facts extracted via LLM after each response. Accumulated across sessions.
+              <p className="text-[9px] text-muted-foreground/40 mb-2">
+                A living document updated by the LLM after conversations. Captures the child's life, interests, and context.
               </p>
-              {memoryCategories.map((cat) => (
-                <div key={cat.label} className="mb-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: cat.color }}>{cat.label}</p>
-                  {cat.items.length === 0 ? (
-                    <p className="text-[10px] text-muted-foreground/30 pl-1">None yet</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {cat.items.map((item, i) => (
-                        <span key={i} className="text-[10px] px-2 py-1 rounded-full border text-foreground/70" style={{ borderColor: `${cat.color}33`, background: `${cat.color}15` }}>{item}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+              <textarea
+                value={creature.childProfile}
+                onChange={(e) => onChildProfileChange(e.target.value)}
+                placeholder={`Name: ${userName}\nAge: ...\nInterests: ...\nLife context: ...\nFriends: ...\nFeeling lately: ...`}
+                className="w-full h-48 rounded-lg border border-border/30 bg-card/50 px-3 py-2 text-xs text-foreground/90 resize-y focus:outline-none focus:border-[hsl(var(--creature-frog-glow))] transition-colors"
+                spellCheck={false}
+              />
             </div>
 
-            {/* Relationship Ledger (read-only view) */}
-            {creature.relationshipLedger && (
-              <div className="mt-4">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Relationship Ledger</label>
-                <p className="text-[10px] text-muted-foreground/40 mt-1 mb-2">Edit on the Creature tab</p>
-                <div className="px-3 py-2 rounded-lg border border-border/20 text-[10px] text-foreground/60 whitespace-pre-wrap" style={{ background: "hsla(230, 14%, 12%, 0.8)" }}>
-                  {creature.relationshipLedger}
-                </div>
+            {/* Relationship Notes */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Relationship Notes</label>
+                <button onClick={() => onLedgerChange("")} className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors">Clear</button>
               </div>
-            )}
+              <p className="text-[9px] text-muted-foreground/40 mb-2">
+                How the child relates to the creature. Updated by the profile system.
+              </p>
+              <textarea
+                value={creature.relationshipLedger}
+                onChange={(e) => onLedgerChange(e.target.value)}
+                placeholder="How does the child relate to Frog? Trusting, playful, opens up about feelings..."
+                className="w-full h-28 rounded-lg border border-border/30 bg-card/50 px-3 py-2 text-xs text-foreground/90 resize-y focus:outline-none focus:border-[hsl(var(--creature-frog-glow))] transition-colors"
+                spellCheck={false}
+              />
+            </div>
 
+            {/* Last Session Summary */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Last Session Summary</label>
+              <div className="mt-2 px-3 py-2.5 rounded-lg border border-border/20 text-[10px] text-foreground/60 whitespace-pre-wrap min-h-[40px]" style={{ background: "hsla(230, 14%, 12%, 0.8)" }}>
+                {lastSessionSummary || "No session summary yet — will be populated after the next conversation."}
+              </div>
+            </div>
+
+            {/* Word Cloud (secondary) */}
             <div className="mt-4">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Word Cloud</label>
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -518,9 +594,9 @@ const ConfigPanel: React.FC<ConfigPanelProps> = (props) => {
               <>
                 <div className="border-t border-border/20" />
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 block">Memory Extraction</label>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 block">Memory / Profile Updates</label>
                   <div className="grid grid-cols-2 gap-2">
-                    <StatCard label="Extractions" value={allTimeStats.memoryExtractionCalls} />
+                    <StatCard label="Updates" value={allTimeStats.memoryExtractionCalls} />
                     <StatCard label="Tokens Used" value={allTimeStats.memoryExtractionTokens.toLocaleString()} />
                     <StatCard label="Est. Cost" value={estimateMemoryCost(allTimeStats.memoryExtractionTokens)} />
                   </div>
@@ -586,6 +662,100 @@ function ToggleRow({ label, checked, onChange }: { label: string; checked: boole
       >
         <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-foreground/90 transition-transform ${checked ? "left-[18px]" : "left-0.5"}`} />
       </button>
+    </div>
+  );
+}
+
+function ThreadEditor({ thread, onChange, onRemove }: {
+  thread: any;
+  onChange: (updated: any) => void;
+  onRemove: () => void;
+}) {
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <div className="rounded-lg border border-border/20 overflow-hidden" style={{ background: "hsla(230, 14%, 12%, 0.8)" }}>
+      <div className="flex items-center gap-2 px-3 py-2 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        {expanded ? <ChevronDown size={12} className="text-muted-foreground/50" /> : <ChevronRight size={12} className="text-muted-foreground/50" />}
+        <span className="text-[11px] text-foreground/80 font-medium flex-1">{thread.title || "Untitled"}</span>
+        {thread.resolved && <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted-foreground/20 text-muted-foreground/50">Resolved</span>}
+        <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-muted-foreground/30 hover:text-destructive/60 transition-colors">
+          <Trash2 size={11} />
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="px-3 pb-3 space-y-2">
+          <input
+            value={thread.title || ""}
+            onChange={(e) => onChange({ ...thread, title: e.target.value })}
+            className="w-full px-2 py-1 rounded border border-border/20 bg-card/30 text-[10px] text-foreground/80 focus:outline-none"
+            placeholder="Thread title"
+          />
+          <div>
+            <p className="text-[9px] text-muted-foreground/50 mb-1">Current State</p>
+            <textarea
+              value={thread.current_state || ""}
+              onChange={(e) => onChange({ ...thread, current_state: e.target.value })}
+              className="w-full h-16 rounded border border-border/20 bg-card/30 px-2 py-1 text-[10px] text-foreground/80 resize-y focus:outline-none"
+            />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[9px] text-muted-foreground/50">Developments ({(thread.developments || []).length})</p>
+              <button
+                onClick={() => onChange({ ...thread, developments: [...(thread.developments || []), ""] })}
+                className="text-[9px] text-[hsl(var(--creature-frog-glow))]/60 hover:text-[hsl(var(--creature-frog-glow))] transition-colors flex items-center gap-0.5"
+              >
+                <Plus size={9} /> Add
+              </button>
+            </div>
+            {(thread.developments || []).map((dev: string, di: number) => (
+              <div key={di} className="flex gap-1 mb-1">
+                <span className="text-[9px] text-muted-foreground/30 mt-1 w-4 shrink-0">{di + 1}.</span>
+                <textarea
+                  value={dev}
+                  onChange={(e) => {
+                    const newDevs = [...(thread.developments || [])];
+                    newDevs[di] = e.target.value;
+                    onChange({ ...thread, developments: newDevs });
+                  }}
+                  className="flex-1 h-12 rounded border border-border/20 bg-card/30 px-2 py-1 text-[10px] text-foreground/80 resize-y focus:outline-none"
+                />
+                <button
+                  onClick={() => {
+                    const newDevs = (thread.developments || []).filter((_: any, i: number) => i !== di);
+                    onChange({ ...thread, developments: newDevs });
+                  }}
+                  className="text-muted-foreground/20 hover:text-destructive/60 transition-colors mt-1"
+                >
+                  <Trash2 size={9} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <ToggleRow
+              label="Child involved"
+              checked={thread.child_involved || false}
+              onChange={(v) => onChange({ ...thread, child_involved: v })}
+            />
+          </div>
+          {thread.child_involved && (
+            <input
+              value={thread.child_advice || ""}
+              onChange={(e) => onChange({ ...thread, child_advice: e.target.value })}
+              className="w-full px-2 py-1 rounded border border-border/20 bg-card/30 text-[10px] text-foreground/80 focus:outline-none"
+              placeholder="Child's advice..."
+            />
+          )}
+          <ToggleRow
+            label="Resolved"
+            checked={thread.resolved || false}
+            onChange={(v) => onChange({ ...thread, resolved: v })}
+          />
+        </div>
+      )}
     </div>
   );
 }

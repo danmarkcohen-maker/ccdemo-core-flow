@@ -181,6 +181,7 @@ function assembleContext(
     activeThreads?: string;
     relationshipLedger?: string;
     dailyLifePrompt?: string;
+    childProfile?: string;
     enabledSections?: string[];
     maxContextTokens?: number;
   },
@@ -205,7 +206,11 @@ function assembleContext(
 
   // Relationship Ledger
   if (enabled.has("ledger") && config.relationshipLedger) {
-    sections.push({ key: "ledger", header: "## Who You're Talking To", content: config.relationshipLedger });
+    let ledgerContent = config.relationshipLedger;
+    if (config.childProfile) {
+      ledgerContent += "\n\n" + config.childProfile;
+    }
+    sections.push({ key: "ledger", header: "## Who You're Talking To", content: ledgerContent });
   }
 
   // Active Threads
@@ -213,10 +218,11 @@ function assembleContext(
     try {
       const threads = JSON.parse(config.activeThreads) as LifeThread[];
       if (threads.length > 0) {
-        const threadText = threads.map(t =>
+        const activeThreads = threads.filter((t: any) => !t.resolved);
+        const threadText = activeThreads.map(t =>
           `**${t.title}**: ${t.current_state}${t.child_involved && t.child_advice ? ` (Your friend suggested: "${t.child_advice}")` : ""}`
         ).join("\n");
-        sections.push({ key: "threads", header: "## Your Life Right Now", content: threadText });
+        if (threadText) sections.push({ key: "threads", header: "## Your Life Right Now", content: threadText });
       }
     } catch {}
   }
@@ -280,11 +286,10 @@ interface LifeThread {
   id: string;
   title: string;
   current_state: string;
-  next_development: string;
-  days_until_next: number;
-  last_updated: string;
+  developments: string[];
   child_involved: boolean;
   child_advice: string | null;
+  resolved: boolean;
 }
 
 // ─── Stage 5: Post-Response Validation ───────────────────────────────

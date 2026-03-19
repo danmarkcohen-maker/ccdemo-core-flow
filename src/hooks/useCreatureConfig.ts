@@ -6,11 +6,24 @@ export interface LifeThread {
   id: string;
   title: string;
   current_state: string;
-  next_development: string;
-  days_until_next: number;
-  last_updated: string; // ISO date
+  developments: string[];
   child_involved: boolean;
   child_advice: string | null;
+  resolved: boolean;
+}
+
+export interface SessionState {
+  lastSessionTimestamp: string | null;
+  lastSessionSummary: string;
+  childProfile: string;
+  sessionCount: number;
+}
+
+export interface ReflectionOutput {
+  follow_up: string | null;
+  thread_updates: Array<{ thread_id: string; advance: boolean; reason: string }>;
+  creature_mood: string;
+  opener_hint: string;
 }
 
 export interface CreatureConfig {
@@ -20,6 +33,8 @@ export interface CreatureConfig {
   dailyLifePrompt: string;
   relationshipLedger: string;
   completedThreads: string[];
+  childProfile: string;
+  lastSessionSummary: string;
 }
 
 export interface OrchestratorConfig {
@@ -29,6 +44,8 @@ export interface OrchestratorConfig {
   maxContextTokens: number;
   enabledSections: string[];
   responseLengthLimit: number;
+  sessionTimeoutMinutes: number;
+  profileUpdateFrequency: "every" | "every3" | "manual";
 }
 
 export interface OrchestratorMeta {
@@ -44,6 +61,22 @@ export interface OrchestratorMeta {
     passed: boolean;
     flags: string[];
   };
+}
+
+// ─── Seasonal Context ────────────────────────────────────────────────
+
+export function getSeasonalContext(): string {
+  const month = new Date().getMonth();
+  if (month >= 2 && month <= 4) {
+    return "It's spring in the Marshlands. Everything is growing. Tadpoles are everywhere. The lake is high from the spring rain and the days are getting longer.";
+  }
+  if (month >= 5 && month <= 7) {
+    return "It's summer in the Marshlands. Long, warm days. The fireflies are incredible at dusk. The shallow water is warm and the dragonflies are out in force.";
+  }
+  if (month >= 8 && month <= 10) {
+    return "It's autumn in the Marshlands. Leaves drift across the lake. The air is crisp. Owl is busy preparing for winter. The sunsets have been amazing.";
+  }
+  return "It's winter in the Marshlands. Everything is quiet and cold. The reeds are frosted. You spend more time in your cozy hollow. The lake is very still.";
 }
 
 // ─── Defaults ────────────────────────────────────────────────────────
@@ -76,25 +109,33 @@ const DEFAULT_THREADS: LifeThread[] = [
     id: "swimming",
     title: "Learning to swim better",
     current_state: "You've been thinking about trying to swim in slightly deeper water. You haven't tried yet — you're working up the courage.",
-    next_development: "You waded in a bit deeper than usual today. Only up to your chest. It was scary but you did it.",
-    days_until_next: 3,
-    last_updated: new Date().toISOString().split("T")[0],
+    developments: [
+      "You waded in a bit deeper than usual today. Only up to your chest. It was scary but you did it.",
+      "You went back and managed to swim a few strokes in the deeper section. Your heart was pounding but you didn't panic.",
+      "You can now swim comfortably in the middle of the lake. The deep water still scares you but you're getting braver.",
+    ],
     child_involved: false,
     child_advice: null,
+    resolved: false,
   },
   {
     id: "owl_book",
     title: "Owl's missing book",
     current_state: "Owl has lost a favourite book and is being grumpy about it. Owl asked you to keep an eye out for it around the marsh.",
-    next_development: "You found something that might be a page from the book, stuck in the reeds near the lake. It's waterlogged but you can make out some words.",
-    days_until_next: 2,
-    last_updated: new Date().toISOString().split("T")[0],
+    developments: [
+      "You found something that might be a page from the book, stuck in the reeds near the lake. It's waterlogged but you can make out some words.",
+      "You showed Owl the page and Owl got quite emotional. Apparently the book was a gift from Owl's old mentor. Owl asked if you'd help look for the rest.",
+      "You and Fox found the book wedged under a rock near the stream. It's damaged but mostly intact. Owl was so grateful — Owl actually hugged you, which has literally never happened before.",
+    ],
     child_involved: false,
     child_advice: null,
+    resolved: false,
   },
 ];
 
-const DEFAULT_DAILY_LIFE = `You had a normal day in the Marshlands today. You might mention any of these if they fit naturally: the weather (misty this morning, cleared up later), something you noticed at the lake, a dragonfly that was following you around, a nice patch of sun you found on your rock, the sound the reeds make in the wind, something funny a beetle did, the smell after rain. These are small moments — don't force them. Only mention something if the conversation has a natural pause or the child asks what you've been up to.`;
+const DEFAULT_DAILY_LIFE = `You had a normal day in the Marshlands today. You might mention any of these if they fit naturally: the weather (misty this morning, cleared up later), something you noticed at the lake, a dragonfly that was following you around, a nice patch of sun you found on your rock, the sound the reeds make in the wind, something funny a beetle did, the smell after rain. These are small moments — don't force them. Only mention something if the conversation has a natural pause or the child asks what you've been up to.
+
+You might also casually mention other creatures if it fits: you saw Owl reading on the hill, Fox came by wanting to go on an adventure, you heard Robot making strange noises at the edge of the marsh. These are passing mentions — don't make them into stories unless the child asks.`;
 
 const DEFAULT_DEFLECTIONS = `Hmm, my brain went all foggy for a second there. What were we talking about? 🐸
 Ribbit... I got distracted by a fly. What did you say? 🐸
@@ -107,6 +148,8 @@ const ALL_SECTIONS = ["personality", "backstory", "threads", "ledger", "rules", 
 const STORAGE_KEY = "craiture_creature_config";
 const ORCH_STORAGE_KEY = "craiture_orchestrator_config";
 const ORCH_LOG_KEY = "craiture_orchestrator_log";
+const SESSION_STATE_KEY = "craiture_session_state";
+const REFLECTION_LOG_KEY = "craiture_last_reflection";
 
 // ─── Hook ────────────────────────────────────────────────────────────
 
@@ -115,7 +158,36 @@ export function useCreatureConfig() {
   const [creature, setCreature] = useState<CreatureConfig>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Migrate old format: convert next_development to developments array
+        if (parsed.threads) {
+          parsed.threads = parsed.threads.map((t: any) => {
+            if ('next_development' in t && !('developments' in t)) {
+              return {
+                id: t.id,
+                title: t.title,
+                current_state: t.current_state,
+                developments: t.next_development ? [t.next_development] : [],
+                child_involved: t.child_involved || false,
+                child_advice: t.child_advice || null,
+                resolved: false,
+              };
+            }
+            return { ...t, resolved: t.resolved ?? false, developments: t.developments ?? [] };
+          });
+        }
+        return {
+          personality: parsed.personality || DEFAULT_PERSONALITY,
+          backstory: parsed.backstory || DEFAULT_BACKSTORY,
+          threads: parsed.threads || DEFAULT_THREADS,
+          dailyLifePrompt: parsed.dailyLifePrompt || DEFAULT_DAILY_LIFE,
+          relationshipLedger: parsed.relationshipLedger || "",
+          completedThreads: parsed.completedThreads || [],
+          childProfile: parsed.childProfile || "",
+          lastSessionSummary: parsed.lastSessionSummary || "",
+        };
+      }
     } catch {}
     return {
       personality: DEFAULT_PERSONALITY,
@@ -124,14 +196,51 @@ export function useCreatureConfig() {
       dailyLifePrompt: DEFAULT_DAILY_LIFE,
       relationshipLedger: "",
       completedThreads: [],
+      childProfile: "",
+      lastSessionSummary: "",
     };
+  });
+
+  // Session state
+  const [sessionState, setSessionState] = useState<SessionState>(() => {
+    try {
+      const stored = localStorage.getItem(SESSION_STATE_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return {
+      lastSessionTimestamp: null,
+      lastSessionSummary: "",
+      childProfile: "",
+      sessionCount: 0,
+    };
+  });
+
+  // Last reflection output (for debug panel)
+  const [lastReflection, setLastReflection] = useState<ReflectionOutput | null>(() => {
+    try {
+      const stored = localStorage.getItem(REFLECTION_LOG_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return null;
   });
 
   // Orchestrator config
   const [orchestrator, setOrchestrator] = useState<OrchestratorConfig>(() => {
     try {
       const stored = localStorage.getItem(ORCH_STORAGE_KEY);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          safetyGateEnabled: parsed.safetyGateEnabled ?? true,
+          intentClassificationEnabled: parsed.intentClassificationEnabled ?? true,
+          safetyDeflections: parsed.safetyDeflections || DEFAULT_DEFLECTIONS,
+          maxContextTokens: parsed.maxContextTokens || 2000,
+          enabledSections: parsed.enabledSections || [...ALL_SECTIONS],
+          responseLengthLimit: parsed.responseLengthLimit || 200,
+          sessionTimeoutMinutes: parsed.sessionTimeoutMinutes ?? 30,
+          profileUpdateFrequency: parsed.profileUpdateFrequency || "every",
+        };
+      }
     } catch {}
     return {
       safetyGateEnabled: true,
@@ -140,6 +249,8 @@ export function useCreatureConfig() {
       maxContextTokens: 2000,
       enabledSections: [...ALL_SECTIONS],
       responseLengthLimit: 200,
+      sessionTimeoutMinutes: 30,
+      profileUpdateFrequency: "every" as const,
     };
   });
 
@@ -165,12 +276,24 @@ export function useCreatureConfig() {
     localStorage.setItem(ORCH_LOG_KEY, JSON.stringify(orchestratorLog));
   }, [orchestratorLog]);
 
+  useEffect(() => {
+    localStorage.setItem(SESSION_STATE_KEY, JSON.stringify(sessionState));
+  }, [sessionState]);
+
+  useEffect(() => {
+    if (lastReflection) {
+      localStorage.setItem(REFLECTION_LOG_KEY, JSON.stringify(lastReflection));
+    }
+  }, [lastReflection]);
+
   // Creature field setters
   const setPersonality = useCallback((v: string) => setCreature(c => ({ ...c, personality: v })), []);
   const setBackstory = useCallback((v: string) => setCreature(c => ({ ...c, backstory: v })), []);
   const setThreads = useCallback((v: LifeThread[]) => setCreature(c => ({ ...c, threads: v })), []);
   const setDailyLifePrompt = useCallback((v: string) => setCreature(c => ({ ...c, dailyLifePrompt: v })), []);
   const setRelationshipLedger = useCallback((v: string) => setCreature(c => ({ ...c, relationshipLedger: v })), []);
+  const setChildProfile = useCallback((v: string) => setCreature(c => ({ ...c, childProfile: v })), []);
+  const setLastSessionSummary = useCallback((v: string) => setCreature(c => ({ ...c, lastSessionSummary: v })), []);
 
   // Thread helpers
   const addThread = useCallback(() => {
@@ -178,59 +301,37 @@ export function useCreatureConfig() {
       id: `thread_${Date.now()}`,
       title: "New thread",
       current_state: "",
-      next_development: "",
-      days_until_next: 3,
-      last_updated: new Date().toISOString().split("T")[0],
+      developments: [],
       child_involved: false,
       child_advice: null,
+      resolved: false,
     };
     setCreature(c => ({ ...c, threads: [...c.threads, newThread] }));
   }, []);
 
-  const advanceThreads = useCallback(() => {
-    const today = new Date();
+  // Advance a single thread (called when reflection says to advance)
+  const advanceThread = useCallback((threadId: string) => {
     setCreature(c => {
-      const updatedThreads: LifeThread[] = [];
-      const newCompleted = [...c.completedThreads];
-
-      for (const thread of c.threads) {
-        const lastDate = new Date(thread.last_updated);
-        const daysSince = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (daysSince >= thread.days_until_next && thread.next_development) {
-          // Promote next_development to current_state
-          updatedThreads.push({
-            ...thread,
-            current_state: thread.next_development,
-            next_development: "",
-            last_updated: today.toISOString().split("T")[0],
-          });
-        } else if (!thread.next_development && !thread.current_state) {
-          // Resolved — compress to completed
-          newCompleted.push(`${thread.title} (resolved)`);
-        } else {
-          updatedThreads.push(thread);
-        }
-      }
-
-      return { ...c, threads: updatedThreads, completedThreads: newCompleted };
+      const updatedThreads = c.threads.map(t => {
+        if (t.id !== threadId || t.developments.length === 0) return t;
+        const [next, ...rest] = t.developments;
+        return { ...t, current_state: next, developments: rest };
+      });
+      return { ...c, threads: updatedThreads };
     });
   }, []);
 
+  // Advance all threads at once (manual testing)
   const advanceAllNow = useCallback(() => {
     setCreature(c => {
       const updatedThreads: LifeThread[] = [];
       const newCompleted = [...c.completedThreads];
 
       for (const thread of c.threads) {
-        if (thread.next_development) {
-          updatedThreads.push({
-            ...thread,
-            current_state: thread.next_development,
-            next_development: "",
-            last_updated: new Date().toISOString().split("T")[0],
-          });
-        } else if (!thread.current_state) {
+        if (thread.developments.length > 0) {
+          const [next, ...rest] = thread.developments;
+          updatedThreads.push({ ...thread, current_state: next, developments: rest });
+        } else if (!thread.current_state || thread.resolved) {
           newCompleted.push(`${thread.title} (resolved)`);
         } else {
           updatedThreads.push(thread);
@@ -240,6 +341,48 @@ export function useCreatureConfig() {
       return { ...c, threads: updatedThreads, completedThreads: newCompleted };
     });
   }, []);
+
+  // Resolve a thread
+  const resolveThread = useCallback((threadId: string) => {
+    setCreature(c => {
+      const thread = c.threads.find(t => t.id === threadId);
+      if (!thread) return c;
+      return {
+        ...c,
+        threads: c.threads.map(t => t.id === threadId ? { ...t, resolved: true } : t),
+        completedThreads: [...c.completedThreads, `${thread.title} (resolved)`],
+      };
+    });
+  }, []);
+
+  // Session state helpers
+  const updateLastSessionTimestamp = useCallback(() => {
+    setSessionState(s => ({ ...s, lastSessionTimestamp: new Date().toISOString() }));
+  }, []);
+
+  const incrementSessionCount = useCallback(() => {
+    setSessionState(s => ({ ...s, sessionCount: s.sessionCount + 1 }));
+  }, []);
+
+  const isNewSession = useCallback((): boolean => {
+    if (!sessionState.lastSessionTimestamp) return true;
+    const lastTime = new Date(sessionState.lastSessionTimestamp).getTime();
+    const now = Date.now();
+    const minutesSince = (now - lastTime) / (1000 * 60);
+    return minutesSince >= orchestrator.sessionTimeoutMinutes;
+  }, [sessionState.lastSessionTimestamp, orchestrator.sessionTimeoutMinutes]);
+
+  const getTimeSinceLastSession = useCallback((): string => {
+    if (!sessionState.lastSessionTimestamp) return "never";
+    const lastTime = new Date(sessionState.lastSessionTimestamp).getTime();
+    const now = Date.now();
+    const minutes = Math.floor((now - lastTime) / (1000 * 60));
+    if (minutes < 60) return `${minutes} minutes`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""}`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days > 1 ? "s" : ""}`;
+  }, [sessionState.lastSessionTimestamp]);
 
   // Orchestrator setters
   const updateOrchestrator = useCallback((partial: Partial<OrchestratorConfig>) => {
@@ -274,8 +417,25 @@ export function useCreatureConfig() {
       activeThreads: JSON.stringify(creature.threads),
       relationshipLedger: creature.relationshipLedger,
       dailyLifePrompt: creature.dailyLifePrompt,
+      childProfile: creature.childProfile,
     };
   }, [orchestrator, creature]);
+
+  // Build reflection payload
+  const buildReflectionPayload = useCallback(() => {
+    return {
+      creaturePersonality: creature.personality,
+      relationshipLedger: creature.relationshipLedger,
+      childProfile: creature.childProfile,
+      lastSessionSummary: creature.lastSessionSummary,
+      lastSessionTimestamp: sessionState.lastSessionTimestamp,
+      currentTimestamp: new Date().toISOString(),
+      lifeThreads: creature.threads.filter(t => !t.resolved),
+      backstoryExcerpt: creature.backstory,
+      seasonContext: getSeasonalContext(),
+      isFirstEver: sessionState.sessionCount === 0,
+    };
+  }, [creature, sessionState]);
 
   // Reset
   const resetCreatureToDefaults = useCallback(() => {
@@ -286,6 +446,8 @@ export function useCreatureConfig() {
       dailyLifePrompt: DEFAULT_DAILY_LIFE,
       relationshipLedger: "",
       completedThreads: [],
+      childProfile: "",
+      lastSessionSummary: "",
     });
   }, []);
 
@@ -297,6 +459,8 @@ export function useCreatureConfig() {
       maxContextTokens: 2000,
       enabledSections: [...ALL_SECTIONS],
       responseLengthLimit: 200,
+      sessionTimeoutMinutes: 30,
+      profileUpdateFrequency: "every",
     });
     setOrchestratorLog([]);
   }, []);
@@ -304,6 +468,10 @@ export function useCreatureConfig() {
   const hardResetCreature = useCallback(() => {
     resetCreatureToDefaults();
     resetOrchestratorToDefaults();
+    setSessionState({ lastSessionTimestamp: null, lastSessionSummary: "", childProfile: "", sessionCount: 0 });
+    setLastReflection(null);
+    localStorage.removeItem(SESSION_STATE_KEY);
+    localStorage.removeItem(REFLECTION_LOG_KEY);
   }, [resetCreatureToDefaults, resetOrchestratorToDefaults]);
 
   return {
@@ -313,10 +481,22 @@ export function useCreatureConfig() {
     setThreads,
     setDailyLifePrompt,
     setRelationshipLedger,
+    setChildProfile,
+    setLastSessionSummary,
     addThread,
-    advanceThreads,
+    advanceThread,
     advanceAllNow,
+    resolveThread,
     resetCreatureToDefaults,
+
+    sessionState,
+    updateLastSessionTimestamp,
+    incrementSessionCount,
+    isNewSession,
+    getTimeSinceLastSession,
+
+    lastReflection,
+    setLastReflection,
 
     orchestrator,
     updateOrchestrator,
@@ -325,6 +505,7 @@ export function useCreatureConfig() {
     logOrchestratorMeta,
     resetOrchestratorToDefaults,
     buildOrchestratorPayload,
+    buildReflectionPayload,
 
     hardResetCreature,
 
