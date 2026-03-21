@@ -107,10 +107,12 @@ Respond with JSON only:
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
+        const stringify = (v: unknown): string =>
+          typeof v === "string" ? v : typeof v === "object" && v !== null ? JSON.stringify(v, null, 2) : String(v ?? "");
         result = {
-          updatedProfile: parsed.updatedProfile || result.updatedProfile,
-          updatedLedger: parsed.updatedLedger || result.updatedLedger,
-          sessionSummary: parsed.sessionSummary || "",
+          updatedProfile: stringify(parsed.updatedProfile) || result.updatedProfile,
+          updatedLedger: stringify(parsed.updatedLedger) || result.updatedLedger,
+          sessionSummary: stringify(parsed.sessionSummary) || "",
         };
       }
     } catch (e) {

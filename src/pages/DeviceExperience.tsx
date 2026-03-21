@@ -150,9 +150,11 @@ const DeviceExperience: React.FC = () => {
 
       if (resp.ok) {
         const data = await resp.json();
-        if (data.updatedProfile) creatureConfig.setChildProfile(data.updatedProfile);
-        if (data.updatedLedger) creatureConfig.setRelationshipLedger(data.updatedLedger);
-        if (data.sessionSummary) creatureConfig.setLastSessionSummary(data.sessionSummary);
+        const ensureStr = (v: unknown): string =>
+          typeof v === "string" ? v : typeof v === "object" && v !== null ? JSON.stringify(v, null, 2) : String(v ?? "");
+        if (data.updatedProfile) creatureConfig.setChildProfile(ensureStr(data.updatedProfile));
+        if (data.updatedLedger) creatureConfig.setRelationshipLedger(ensureStr(data.updatedLedger));
+        if (data.sessionSummary) creatureConfig.setLastSessionSummary(ensureStr(data.sessionSummary));
 
         // Track usage
         if (data.usage) {
