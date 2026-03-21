@@ -177,15 +177,17 @@ export function useCreatureConfig() {
             return { ...t, resolved: t.resolved ?? false, developments: t.developments ?? [] };
           });
         }
+        const ensureStr = (v: unknown): string =>
+          typeof v === "string" ? v : typeof v === "object" && v !== null ? JSON.stringify(v, null, 2) : String(v ?? "");
         return {
-          personality: parsed.personality || DEFAULT_PERSONALITY,
-          backstory: parsed.backstory || DEFAULT_BACKSTORY,
+          personality: ensureStr(parsed.personality) || DEFAULT_PERSONALITY,
+          backstory: ensureStr(parsed.backstory) || DEFAULT_BACKSTORY,
           threads: parsed.threads || DEFAULT_THREADS,
-          dailyLifePrompt: parsed.dailyLifePrompt || DEFAULT_DAILY_LIFE,
-          relationshipLedger: parsed.relationshipLedger || "",
+          dailyLifePrompt: ensureStr(parsed.dailyLifePrompt) || DEFAULT_DAILY_LIFE,
+          relationshipLedger: ensureStr(parsed.relationshipLedger),
           completedThreads: parsed.completedThreads || [],
-          childProfile: parsed.childProfile || "",
-          lastSessionSummary: parsed.lastSessionSummary || "",
+          childProfile: ensureStr(parsed.childProfile),
+          lastSessionSummary: ensureStr(parsed.lastSessionSummary),
         };
       }
     } catch {}
